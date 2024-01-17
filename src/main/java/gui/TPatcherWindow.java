@@ -3,13 +3,13 @@ package gui;
 import java.awt.BorderLayout;
 import java.awt.Button;
 import java.awt.Dimension;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-public class MainWindow extends JFrame {
+public class TPatcherWindow extends JFrame {
 
     String windowName;
 
@@ -17,7 +17,7 @@ public class MainWindow extends JFrame {
 
     Button patchButton;
 
-    public MainWindow() {
+    public TPatcherWindow() {
         windowName = "PSHE patcher";
         setupUi();
         setupEvents();
@@ -38,10 +38,10 @@ public class MainWindow extends JFrame {
     }
 
     private void setupEvents() {
-        this.addWindowListener(new WindowAdapter() {
+        patchButton.addActionListener(new ActionListener() {
             @Override
-            public void windowClosing(WindowEvent e) {
-                System.exit(0);
+            public void actionPerformed(ActionEvent e) {
+                
             }
         });
     }
