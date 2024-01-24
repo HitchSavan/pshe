@@ -3,5 +3,5 @@
         "pass": "ipsum228",
         "login": "lorem"
     },
-    "reopenWindow": true
+    "reopenWindow": false
 }
