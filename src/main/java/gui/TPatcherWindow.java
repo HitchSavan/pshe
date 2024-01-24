@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -39,6 +40,8 @@ public class TPatcherWindow extends JFrame {
     JFileChooser fileChooser;
 
     Button patchButton;
+
+    int buttonColumnIndex = 0;
 
     public TPatcherWindow() {
         windowName = "PSHE patcher";
@@ -110,6 +113,8 @@ public class TPatcherWindow extends JFrame {
     private void setupHistoryTabUi() {
         historyTab = new JPanel();
         historyTab.setLayout(new BoxLayout(historyTab, BoxLayout.PAGE_AXIS));
+
+        // TODO: PLACEHOLDER
         String[] columnNames = {"Patch date", "Version", "Message", ""};
         Object[][] data = {
             {"01-12-2023", "31541", "last patch", "checkout"},
@@ -117,8 +122,33 @@ public class TPatcherWindow extends JFrame {
             {"05-02-2023", "5655", "first patch", "checkout"}
         };
 
-        DefaultTableModel model = new DefaultTableModel(data, columnNames);
-        JTable table = new JTable(model);
+        buttonColumnIndex = data[0].length - 1;
+
+        DefaultTableModel model = new DefaultTableModel(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+               // set all cells non-editable, except buttons
+               return column == buttonColumnIndex;
+            }
+        };
+
+        JTable table = new JTable(model){         
+            public String getToolTipText(MouseEvent e) {
+                String tip = null;
+                java.awt.Point p = e.getPoint();
+                int rowIndex = rowAtPoint(p);
+                int colIndex = columnAtPoint(p);
+
+                if (colIndex == buttonColumnIndex)
+                    return null;
+
+                try {
+                    tip = getValueAt(rowIndex, colIndex).toString();
+                } catch (RuntimeException e1) {}
+
+                return tip;
+            }
+        };
 
         Action checkout = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
