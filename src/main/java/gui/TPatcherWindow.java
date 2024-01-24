@@ -15,10 +15,12 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 
 import gui.utils.ButtonColumn;
 
@@ -59,7 +61,7 @@ public class TPatcherWindow extends JFrame {
 
         this.add(tabsWindow);
 
-        this.setMinimumSize(new Dimension(500, 200));
+        this.setMinimumSize(new Dimension(300, 200));
         this.setTitle(windowName);
         this.setLocationRelativeTo(null);
         this.setVisible(true);
@@ -114,7 +116,7 @@ public class TPatcherWindow extends JFrame {
         historyTab = new JPanel();
         historyTab.setLayout(new BoxLayout(historyTab, BoxLayout.PAGE_AXIS));
 
-        // TODO: PLACEHOLDER
+        // TODO: PATCH TABLE HISTORY PLACEHOLDER
         String[] columnNames = {"Patch date", "Version", "Message", ""};
         Object[][] data = {
             {"01-12-2023", "31541", "last patch", "checkout"},
@@ -150,16 +152,24 @@ public class TPatcherWindow extends JFrame {
             }
         };
 
+        TableColumnModel columnModel =  table.getColumnModel();
+        columnModel.getColumn(0).setMinWidth(70);
+        columnModel.getColumn(0).setMaxWidth(70);
+        columnModel.getColumn(1).setMinWidth(60);
+        columnModel.getColumn(1).setMaxWidth(60);
+        columnModel.getColumn(columnModel.getColumnCount()-1).setMinWidth(90);
+        columnModel.getColumn(columnModel.getColumnCount()-1).setMaxWidth(90);
+
         Action checkout = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                JTable table = (JTable)e.getSource();
-                int modelRow = Integer.valueOf( e.getActionCommand() );
+                // JTable table = (JTable)e.getSource();
+                // int modelRow = Integer.valueOf( e.getActionCommand() );
             }
         };
         
         ButtonColumn buttonColumn = new ButtonColumn(table, checkout, 3);
         buttonColumn.setMnemonic(KeyEvent.VK_ENTER);
-        historyTab.add(table);
+        historyTab.add(new JScrollPane(table));
     }
 
     private void setupEvents() {

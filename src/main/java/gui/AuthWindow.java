@@ -96,7 +96,6 @@ public class AuthWindow extends JFrame {
         passPanel.add(passField);
 
         reopenWindowCheckbox = new Checkbox("Reopen this window", reopenWindow);
-        startPanel.add(reopenWindowCheckbox);
 
         btnConnect = new Button("Connect");
         btnConnect.setMaximumSize(new Dimension(55, 20));
@@ -106,6 +105,7 @@ public class AuthWindow extends JFrame {
         fieldsPanel.setLayout(new BoxLayout(fieldsPanel, BoxLayout.Y_AXIS));
         fieldsPanel.add(loginPanel);
         fieldsPanel.add(passPanel);
+        fieldsPanel.add(reopenWindowCheckbox);
 
         this.setMinimumSize(new Dimension(200, 150));
         this.setTitle("client");
