@@ -1,0 +1,2 @@
+./courgette -gen old_file new_file output.diff
+courgette.exe -gen old_file new_file output.diff

@@ -22,6 +22,8 @@ import javax.swing.JTextField;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import gui.utils.UnpackResources;
+
 public class AuthWindow extends JFrame {
     
     String windowName;
@@ -117,10 +119,10 @@ public class AuthWindow extends JFrame {
     }
 
     private void setupEvents() {
-        
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                UnpackResources.deleteDirectory("tmp");
                 System.exit(0);
             }
         });
@@ -158,6 +160,7 @@ public class AuthWindow extends JFrame {
                                 setVisible(true);
                                 userWindow = null;
                             } else {
+                                UnpackResources.deleteDirectory("tmp");
                                 System.exit(0);
                             }
                         }

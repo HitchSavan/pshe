@@ -1,23 +1,26 @@
 package gui.utils;
 
 import java.io.IOException;
+import java.lang.ProcessBuilder.Redirect;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 public class RunExecutable {
-    public static Process run(String command, String[] args) throws IOException {
+    public static Process runExec(String command, String[] args) throws IOException {
         ArrayList<String> parametrizedCommand = new ArrayList<>();
-        parametrizedCommand.add(command);
-        
-        Runtime rt = Runtime.getRuntime();
+        parametrizedCommand.add(command); 
         if (args != null) {
             parametrizedCommand.addAll(Arrays.asList(args));
         }
         String[] params = new String[parametrizedCommand.size()];
         params = parametrizedCommand.toArray(params);
-        return rt.exec(params); 
+
+        ProcessBuilder pb = new ProcessBuilder(params);
+        pb.redirectOutput(Redirect.INHERIT);
+        pb.redirectError(Redirect.INHERIT);
+        return pb.start();
     }
-    public static Process run(String command) throws IOException {
-        return run(command, null);
+    public static Process runExec(String command) throws IOException {
+        return runExec(command, null);
     }
 }
