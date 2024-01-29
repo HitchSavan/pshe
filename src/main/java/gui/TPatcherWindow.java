@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -23,6 +24,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 
 import gui.utils.ButtonColumn;
+import gui.utils.RunCourgette;
 
 public class TPatcherWindow extends JFrame {
 
@@ -162,8 +164,7 @@ public class TPatcherWindow extends JFrame {
 
         Action checkout = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                // JTable table = (JTable)e.getSource();
-                // int modelRow = Integer.valueOf( e.getActionCommand() );
+                JTable table = (JTable)e.getSource();
             }
         };
         
@@ -176,7 +177,11 @@ public class TPatcherWindow extends JFrame {
         patchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                
+                try {
+                    RunCourgette.run();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }
         });
     }
