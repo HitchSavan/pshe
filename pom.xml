@@ -29,13 +29,13 @@
       <version>1.2</version>
     </dependency>
     
-    <dependency>
+    <!-- <dependency>
       <groupId>pshe_patcher</groupId>
       <artifactId>PSHE_Patcher</artifactId>
       <version>closedalpha.0.0.1</version>
       <scope>system</scope>
-      <systemPath>${pom.basedir}\lib\PSHE_Patcher-closedalpha.0.0.1.jar</systemPath>
-    </dependency>
+      <systemPath>${pom.basedir}/lib/PSHE_Patcher-closedalpha.0.0.1.jar</systemPath>
+    </dependency> -->
   </dependencies>
 
 	<build>
