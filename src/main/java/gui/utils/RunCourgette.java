@@ -14,6 +14,9 @@ public class RunCourgette extends Thread {
         if (os.contains("windows")) {
             UnpackResources.unpackResources("win");
             Process courgette = RunExecutable.runExec("tmp/win/courgette.exe");
+        } else if (os.contains("linux")) {
+            UnpackResources.unpackResources("linux");
+            Process courgette = RunExecutable.runExec("tmp/linux/courgette");
         }
     }
 

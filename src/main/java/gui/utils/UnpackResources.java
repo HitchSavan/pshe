@@ -22,6 +22,8 @@ public class UnpackResources {
                     unpackResources(resourceName + "/" + filename);
                 }
             } else {
+                // TODO: FIX LINUX EXECUTABLE HANDLIND
+                System.out.println(resourceURL);
                 unpackResourceFile(resourceName);
             }
         }
