@@ -100,7 +100,7 @@ public class AuthWindow extends JFrame {
         reopenWindowCheckbox = new Checkbox("Reopen this window", reopenWindow);
 
         btnConnect = new Button("Connect");
-        btnConnect.setMaximumSize(new Dimension(55, 20));
+        btnConnect.setMaximumSize(new Dimension(65, 20));
         startPanel.add(btnConnect);
 
         JPanel fieldsPanel = new JPanel();
