@@ -15,15 +15,17 @@ import java.util.List;
 public class UnpackResources {
     public static void unpackResources(String resourceName) throws IOException {
         URL resourceURL = UnpackResources.class.getClassLoader().getResource(resourceName);
+        // TODO: FIX LINUX EXECUTABLE HANDLIND
+        System.out.print(new File(resourceURL.getPath()).getCanonicalFile());
+        System.out.print("\t");
+        System.out.println(new File(resourceURL.getPath()).getCanonicalFile().isDirectory());
         if (resourceURL.getProtocol().equals("file")) {
-            if (new File(resourceURL.getPath()).isDirectory()) {
+            if (new File(resourceURL.getPath()).getCanonicalFile().isDirectory()) {
                 List<String> files = getResourceFiles(resourceName);
                 for (String filename: files) {
                     unpackResources(resourceName + "/" + filename);
                 }
             } else {
-                // TODO: FIX LINUX EXECUTABLE HANDLIND
-                System.out.println(resourceURL);
                 unpackResourceFile(resourceName);
             }
         }
