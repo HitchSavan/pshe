@@ -12,13 +12,16 @@ public class RunCourgette extends Thread {
         System.out.println("OS name\t -> " + System.getProperty("os.name"));
         System.out.println("OS version\t -> " + System.getProperty("os.version"));
         System.out.println("OS Architecture\t -> " + System.getProperty("os.arch"));
+        System.out.println();
 
         UnpackResources.deleteDirectory("tmp");
         if (os.contains("windows")) {
             UnpackResources.unpackResources("win");
+            System.out.println();
             Process courgette = RunExecutable.runExec("tmp/win/courgette.exe", courgetteArgs);
         } else if (os.contains("linux")) {
             UnpackResources.unpackResources("linux");
+            System.out.println();
             Process courgette = RunExecutable.runExec("tmp/linux/courgette", courgetteArgs);
         }
     }

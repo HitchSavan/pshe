@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -14,13 +15,17 @@ import java.util.List;
 
 public class UnpackResources {
     public static void unpackResources(String resourceName) throws IOException {
-        URL resourceURL = UnpackResources.class.getClassLoader().getResource(resourceName);
-        // TODO: TEST THIS APPROACH
-        System.out.print(new File(resourceURL.getPath()).getCanonicalFile());
+        String resourcePath = UnpackResources.class.getClassLoader().getResource(resourceName).toString();
+        URL resourceURL = new URL(URLDecoder.decode(resourcePath, "UTF-8"));
+        boolean fileFlag = new File(resourceURL.getPath()).isDirectory();
+
+        System.out.print("Extracting \t");
+        System.out.print(new File(resourceURL.getPath()));
         System.out.print("\t");
-        System.out.println(new File(resourceURL.getPath()).getCanonicalFile().isDirectory());
+        System.out.println(fileFlag);
+
         if (resourceURL.getProtocol().equals("file")) {
-            if (new File(resourceURL.getPath()).getCanonicalFile().isDirectory()) {
+            if (fileFlag) {
                 List<String> files = getResourceFiles(resourceName);
                 for (String filename: files) {
                     unpackResources(resourceName + "/" + filename);
