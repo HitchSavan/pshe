@@ -3,5 +3,10 @@
         "pass": "ipsum228",
         "login": "lorem"
     },
-    "reopenWindow": false
+    "patchingInfo": {
+        "rememberPaths": true,
+        "projectPath": "asdasd",
+        "patchPath": "afffffff"
+    },
+    "reopenWindow": true
 }

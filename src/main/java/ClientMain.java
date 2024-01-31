@@ -1,9 +1,9 @@
 import java.io.IOException;
 
-import gui.AdminWindow;
+import gui.UserWindow;
 
 public class ClientMain {
     public static void main(String[] args) throws IOException {
-        new AdminWindow();
+        new UserWindow();
     }
 }

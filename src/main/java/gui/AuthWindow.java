@@ -1,7 +1,6 @@
 package gui;
 
 import java.awt.Button;
-import java.awt.Checkbox;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,14 +21,10 @@ import javax.swing.JTextField;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import gui.utils.UnpackResources;
-
 public class AuthWindow extends JFrame {
     
     String windowName;
     JSONObject config;
-
-    TPatcherWindow userWindow;
 
     String userLogin = "";
     String userPassword = "";
@@ -42,30 +37,30 @@ public class AuthWindow extends JFrame {
     JLabel passLabel;
     JTextField passField;
     
-    Checkbox reopenWindowCheckbox;
-    
     Button btnConnect;
     
-    public AuthWindow() throws IOException {
+    public AuthWindow() {
         windowName = "PSHE patcher";
         setupUi();
         setupEvents();
     }
 
-    private void setupUi() throws IOException {
-
+    private void setupUi() {
         String configFilename = "config.json";
         config = new JSONObject();
-        boolean reopenWindow = false;
 
         if (Files.exists(Paths.get(configFilename))) {
             File file = new File("config.json");
-            String content = new String(Files.readAllBytes(Paths.get(file.toURI())));
-            config = new JSONObject(content);
+            String content;
+            try {
+                content = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                config = new JSONObject(content);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
             userLogin = config.getJSONObject("userInfo").getString("login");
             userPassword = config.getJSONObject("userInfo").getString("pass");
-            reopenWindow = config.getBoolean("reopenWindow");
         }
 
         startPanel = new JPanel();
@@ -97,8 +92,6 @@ public class AuthWindow extends JFrame {
         loginField.setEditable(true);
         passPanel.add(passField);
 
-        reopenWindowCheckbox = new Checkbox("Reopen this window", reopenWindow);
-
         btnConnect = new Button("Connect");
         btnConnect.setMaximumSize(new Dimension(65, 20));
         startPanel.add(btnConnect);
@@ -107,7 +100,6 @@ public class AuthWindow extends JFrame {
         fieldsPanel.setLayout(new BoxLayout(fieldsPanel, BoxLayout.Y_AXIS));
         fieldsPanel.add(loginPanel);
         fieldsPanel.add(passPanel);
-        fieldsPanel.add(reopenWindowCheckbox);
 
         this.setMinimumSize(new Dimension(200, 150));
         this.setTitle("client");
@@ -115,7 +107,7 @@ public class AuthWindow extends JFrame {
         this.add(startPanel, "South");
         this.setTitle(windowName);
         this.setLocationRelativeTo(null);
-        this.setVisible(true);
+        // this.setVisible(true);
     }
 
     private void setupEvents() {
@@ -137,7 +129,6 @@ public class AuthWindow extends JFrame {
                 }
                 config.getJSONObject("userInfo").put("login", userLogin);
                 config.getJSONObject("userInfo").put("pass", userPassword);
-                config.put("reopenWindow", reopenWindowCheckbox.getState());
 
                 try {
                     FileOutputStream jsonOutputStream;
@@ -148,23 +139,8 @@ public class AuthWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
-                if (userWindow == null) {
-                    userWindow = new AdminWindow(); // TODO: PLACEHOLDER, ADD ADMIN VERIFICATION
-                    setVisible(false);
-            
-                    userWindow.addWindowListener(new WindowAdapter() {
-                        @Override
-                        public void windowClosing(WindowEvent e) {
-                            if (reopenWindowCheckbox.getState()) {
-                                setVisible(true);
-                                userWindow = null;
-                            } else {
-                                UnpackResources.deleteDirectory("tmp");
-                                System.exit(0);
-                            }
-                        }
-                    });
-                }
+                setVisible(false);
+                // TODO: ADD ADMIN VERIFICATION
             }
         });
     }

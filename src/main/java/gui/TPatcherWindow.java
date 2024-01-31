@@ -1,6 +1,7 @@
 package gui;
 
 import java.awt.Button;
+import java.awt.Checkbox;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,6 +10,10 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -25,6 +30,9 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import gui.utils.ButtonColumn;
 import gui.utils.RunCourgette;
 import gui.utils.UnpackResources;
@@ -32,11 +40,12 @@ import gui.utils.UnpackResources;
 public class TPatcherWindow extends JFrame {
 
     String windowName;
-
     TPatcherWindow selfPointer = this;
+    AuthWindow authWindow;
 
     JPanel mainTab;
     JPanel historyTab;
+    JPanel adminTab;
 
     JLabel patchPathLabel;
     JTextField patchPathField;
@@ -48,12 +57,21 @@ public class TPatcherWindow extends JFrame {
 
     JFileChooser fileChooser;
 
+    Checkbox rememberPathsCheckbox;
+
     Button patchButton;
 
+    JLabel loginMessage;
+    Button loginButton;
+
     int buttonColumnIndex = 0;
+    String projectPath;
+    String patchPath;
 
     public TPatcherWindow() {
         windowName = "PSHE patcher";
+        authWindow = new AuthWindow();
+
         setupUi();
         setupEvents();
     }
@@ -61,10 +79,12 @@ public class TPatcherWindow extends JFrame {
     private void setupUi() {
         setupMainTabUi();
         setupHistoryTabUi();
+        setupAdminTabUi();
         
         JTabbedPane tabsWindow = new JTabbedPane();
         tabsWindow.addTab("Patching", mainTab);
         tabsWindow.addTab("History", historyTab);
+        tabsWindow.addTab("Admin", adminTab);
 
         this.add(tabsWindow);
 
@@ -75,9 +95,27 @@ public class TPatcherWindow extends JFrame {
     }
 
     private void setupMainTabUi() {
+        String configFilename = "config.json";
+        authWindow.config = new JSONObject();
+        boolean rememberPaths = false;
+
+        if (Files.exists(Paths.get(configFilename))) {
+            File file = new File("config.json");
+            String content;
+            try {
+                content = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                authWindow.config = new JSONObject(content);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            projectPath = authWindow.config.getJSONObject("patchingInfo").getString("projectPath");
+            patchPath = authWindow.config.getJSONObject("patchingInfo").getString("patchPath");
+            rememberPaths = authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths");
+        }
+
         projectPathLabel = new JLabel("Path to project:");
         projectPathLabel.setPreferredSize(new Dimension(90, 0));
-        projectPathField = new JTextField();
+        projectPathField = new JTextField(projectPath);
         projectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         projectPathField.setEditable(true);
         chooseProjectButton = new Button("browse");
@@ -93,7 +131,7 @@ public class TPatcherWindow extends JFrame {
 
         patchPathLabel = new JLabel("Path to patch:");
         patchPathLabel.setPreferredSize(new Dimension(90, 0));
-        patchPathField = new JTextField();
+        patchPathField = new JTextField(patchPath);
         patchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         patchPathField.setEditable(true);
         choosePatchButton = new Button("browse");
@@ -107,6 +145,8 @@ public class TPatcherWindow extends JFrame {
         patchPathPanel.add(choosePatchButton);
         patchPathPanel.add(Box.createHorizontalGlue());
 
+        rememberPathsCheckbox = new Checkbox("Remember", rememberPaths);
+
         patchButton = new Button("Patch");
         patchButton.setMaximumSize(new Dimension(50, 20));
 
@@ -116,6 +156,7 @@ public class TPatcherWindow extends JFrame {
         mainTab.add(Box.createRigidArea(new Dimension(5, 5)));
         mainTab.add(patchPathPanel);
         mainTab.add(Box.createVerticalGlue());
+        mainTab.add(rememberPathsCheckbox);
         mainTab.add(patchButton);
     }
 
@@ -178,6 +219,30 @@ public class TPatcherWindow extends JFrame {
         historyTab.add(new JScrollPane(table));
     }
 
+    // TODO: ADD SUCCESSFUL AUTHORIZATION INTERFACE UPDATE
+    private void setupAdminTabUi() {
+        adminTab = new JPanel();
+        adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.X_AXIS));
+        JPanel loginpanel = new JPanel();
+        loginpanel.setLayout(new BoxLayout(loginpanel, BoxLayout.Y_AXIS));
+
+        loginMessage = new JLabel("You are not logged in");
+        loginMessage.setPreferredSize(new Dimension(150, 0));
+        loginMessage.setAlignmentX(CENTER_ALIGNMENT);
+
+        loginButton = new Button("Login");
+        loginButton.setMaximumSize(new Dimension(50, 20));
+
+        loginpanel.add(Box.createRigidArea(new Dimension(20, 20)));
+        loginpanel.add(loginMessage);
+        loginpanel.add(Box.createRigidArea(new Dimension(20, 20)));
+        loginpanel.add(loginButton);
+
+        adminTab.add(Box.createHorizontalGlue());
+        adminTab.add(loginpanel);
+        adminTab.add(Box.createHorizontalGlue());
+    }
+
     private void setupEvents() {
         this.addWindowListener(new WindowAdapter() {
             @Override
@@ -212,6 +277,25 @@ public class TPatcherWindow extends JFrame {
         patchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                projectPath = projectPathField.getText();
+                patchPath = patchPathField.getText();
+
+                if (!authWindow.config.has("patchingInfo")) {
+                    authWindow.config.put("patchingInfo", new JSONObject());
+                }
+                authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath);
+                authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath);
+                authWindow.config.getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.getState());
+
+                try {
+                    FileOutputStream jsonOutputStream;
+                    jsonOutputStream = new FileOutputStream("config.json");
+                    jsonOutputStream.write(authWindow.config.toString(4).getBytes());
+                    jsonOutputStream.close();
+                } catch (JSONException | IOException e1) {
+                    e1.printStackTrace();
+                }
+
                 RunCourgette courgetteInstance = new RunCourgette();
                 // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
                 String[] args = {"-apply", projectPathField.getText(), patchPathField.getText()};
@@ -221,6 +305,12 @@ public class TPatcherWindow extends JFrame {
                 }
                 System.out.println();
                 courgetteInstance.run(args);
+            }
+        });
+        loginButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                authWindow.setVisible(!authWindow.isVisible());
             }
         });
     }
