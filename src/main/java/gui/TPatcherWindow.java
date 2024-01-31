@@ -186,20 +186,6 @@ public class TPatcherWindow extends JFrame {
                 System.exit(0);
             }
         });
-        patchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                RunCourgette courgetteInstance = new RunCourgette();
-                // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
-                String[] args = {"-apply", projectPathField.getText(), patchPathField.getText()};
-                for (int i = 0; i < args.length; ++i) {
-                    System.out.print(args[i]);
-                    System.out.print("\t");
-                }
-                System.out.println();
-                courgetteInstance.run(args);
-            }
-        });
         choosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -215,12 +201,26 @@ public class TPatcherWindow extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 fileChooser = new JFileChooser();
-                fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
                 int option = fileChooser.showOpenDialog(selfPointer);
                 if(option == JFileChooser.APPROVE_OPTION){
                    File file = fileChooser.getSelectedFile();
                    projectPathField.setText(file.getAbsolutePath());
                 }
+            }
+        });
+        patchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                RunCourgette courgetteInstance = new RunCourgette();
+                // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
+                String[] args = {"-apply", projectPathField.getText(), patchPathField.getText()};
+                for (int i = 0; i < args.length; ++i) {
+                    System.out.print(args[i]);
+                    System.out.print("\t");
+                }
+                System.out.println();
+                courgetteInstance.run(args);
             }
         });
     }
