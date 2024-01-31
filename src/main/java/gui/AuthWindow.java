@@ -122,8 +122,7 @@ public class AuthWindow extends JFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                UnpackResources.deleteDirectory("tmp");
-                System.exit(0);
+                setVisible(false);
             }
         });
 

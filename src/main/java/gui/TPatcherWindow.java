@@ -6,6 +6,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -24,10 +27,13 @@ import javax.swing.table.TableColumnModel;
 
 import gui.utils.ButtonColumn;
 import gui.utils.RunCourgette;
+import gui.utils.UnpackResources;
 
 public class TPatcherWindow extends JFrame {
 
     String windowName;
+
+    TPatcherWindow selfPointer = this;
 
     JPanel mainTab;
     JPanel historyTab;
@@ -173,11 +179,48 @@ public class TPatcherWindow extends JFrame {
     }
 
     private void setupEvents() {
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                UnpackResources.deleteDirectory("tmp");
+                System.exit(0);
+            }
+        });
         patchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 RunCourgette courgetteInstance = new RunCourgette();
-                courgetteInstance.run();
+                // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
+                String[] args = {"-apply", projectPathField.getText(), patchPathField.getText()};
+                for (int i = 0; i < args.length; ++i) {
+                    System.out.print(args[i]);
+                    System.out.print("\t");
+                }
+                System.out.println();
+                courgetteInstance.run(args);
+            }
+        });
+        choosePatchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                fileChooser = new JFileChooser();
+                int option = fileChooser.showOpenDialog(selfPointer);
+                if(option == JFileChooser.APPROVE_OPTION){
+                   File file = fileChooser.getSelectedFile();
+                   patchPathField.setText(file.getAbsolutePath());
+                }
+            }
+        });
+        chooseProjectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                fileChooser = new JFileChooser();
+                fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                int option = fileChooser.showOpenDialog(selfPointer);
+                if(option == JFileChooser.APPROVE_OPTION){
+                   File file = fileChooser.getSelectedFile();
+                   projectPathField.setText(file.getAbsolutePath());
+                }
             }
         });
     }

@@ -15,7 +15,7 @@ import java.util.List;
 public class UnpackResources {
     public static void unpackResources(String resourceName) throws IOException {
         URL resourceURL = UnpackResources.class.getClassLoader().getResource(resourceName);
-        // TODO: FIX LINUX EXECUTABLE HANDLIND
+        // TODO: TEST THIS APPROACH
         System.out.print(new File(resourceURL.getPath()).getCanonicalFile());
         System.out.print("\t");
         System.out.println(new File(resourceURL.getPath()).getCanonicalFile().isDirectory());

@@ -3,6 +3,9 @@ package gui.utils;
 import java.io.IOException;
 
 public class RunCourgette extends Thread {
+
+    static String[] courgetteArgs = null;
+
     public static void runExec() throws IOException, InterruptedException {
         String os = System.getProperty("os.name").toLowerCase();
 
@@ -13,11 +16,16 @@ public class RunCourgette extends Thread {
         UnpackResources.deleteDirectory("tmp");
         if (os.contains("windows")) {
             UnpackResources.unpackResources("win");
-            Process courgette = RunExecutable.runExec("tmp/win/courgette.exe");
+            Process courgette = RunExecutable.runExec("tmp/win/courgette.exe", courgetteArgs);
         } else if (os.contains("linux")) {
             UnpackResources.unpackResources("linux");
-            Process courgette = RunExecutable.runExec("tmp/linux/courgette");
+            Process courgette = RunExecutable.runExec("tmp/linux/courgette", courgetteArgs);
         }
+    }
+    
+    public void run(String[] args) {
+        courgetteArgs = args;
+        run();
     }
 
     @Override
