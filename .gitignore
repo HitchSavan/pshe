@@ -26,10 +26,10 @@
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+# # Compiled Dynamic libraries
+# *.so
+# *.dylib
+# *.dll
 
 # Fortran module files
 *.mod
@@ -42,7 +42,7 @@
 *.lib
 
 # Executables
-*.exe
+## *.exe
 *.out
 *.app
 *.log
@@ -71,3 +71,6 @@ java/build/**
 # JRE
 jdk*
 jre*
+
+# resources folder
+!*/resources
