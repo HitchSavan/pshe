@@ -22,6 +22,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class AuthWindow extends JFrame {
+
+    public enum ACCESS {
+        ADMIN,
+        USER,
+        GUEST,
+    }
+
+    ACCESS curAccess = ACCESS.GUEST;
     
     String windowName;
     JSONObject config;
@@ -139,6 +147,8 @@ public class AuthWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
+                curAccess = ACCESS.ADMIN;
+                
                 setVisible(false);
                 // TODO: ADD ADMIN VERIFICATION
             }

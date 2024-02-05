@@ -2,6 +2,7 @@ package gui;
 
 import java.awt.Button;
 import java.awt.Checkbox;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -14,6 +15,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -43,9 +45,12 @@ public class TPatcherWindow extends JFrame {
     TPatcherWindow selfPointer = this;
     AuthWindow authWindow;
 
+    JTabbedPane tabsWindow;
     JPanel mainTab;
     JPanel historyTab;
+    JPanel adminTabEmpty;
     JPanel adminTab;
+    HashMap<String, Integer> tabsNames = new HashMap<>();
 
     JLabel patchPathLabel;
     JTextField patchPathField;
@@ -55,11 +60,25 @@ public class TPatcherWindow extends JFrame {
     JTextField projectPathField;
     Button chooseProjectButton;
 
+    JLabel adminPatchPathLabel;
+    JTextField adminPatchPathField;
+    Button adminChoosePatchButton;
+
+    JLabel oldProjectPathLabel;
+    JTextField oldProjectPathField;
+    Button chooseOldProjectButton;
+
+    JLabel newProjectPathLabel;
+    JTextField newProjectPathField;
+    Button chooseNewProjectButton;
+
     JFileChooser fileChooser;
 
     Checkbox rememberPathsCheckbox;
+    Checkbox rememberAdminPathsCheckbox;
 
     Button patchButton;
+    Button createPatchButton;
 
     JLabel loginMessage;
     Button loginButton;
@@ -81,10 +100,10 @@ public class TPatcherWindow extends JFrame {
         setupHistoryTabUi();
         setupAdminTabUi();
         
-        JTabbedPane tabsWindow = new JTabbedPane();
-        tabsWindow.addTab("Patching", mainTab);
-        tabsWindow.addTab("History", historyTab);
-        tabsWindow.addTab("Admin", adminTab);
+        tabsWindow = new JTabbedPane();
+        addTab(tabsWindow, "Patching", mainTab);
+        addTab(tabsWindow, "History", historyTab);
+        addTab(tabsWindow, "Admin", adminTabEmpty);
 
         this.add(tabsWindow);
 
@@ -92,6 +111,11 @@ public class TPatcherWindow extends JFrame {
         this.setTitle(windowName);
         this.setLocationRelativeTo(null);
         this.setVisible(true);
+    }
+
+    private void addTab(JTabbedPane tabbedPane, String tabName, Component component) {
+        tabbedPane.addTab(tabName, component);
+        tabsNames.put(tabName, tabbedPane.getTabCount()-1);
     }
 
     private void setupMainTabUi() {
@@ -221,8 +245,8 @@ public class TPatcherWindow extends JFrame {
 
     // TODO: ADD SUCCESSFUL AUTHORIZATION INTERFACE UPDATE
     private void setupAdminTabUi() {
-        adminTab = new JPanel();
-        adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.X_AXIS));
+        adminTabEmpty = new JPanel();
+        adminTabEmpty.setLayout(new BoxLayout(adminTabEmpty, BoxLayout.X_AXIS));
         JPanel loginpanel = new JPanel();
         loginpanel.setLayout(new BoxLayout(loginpanel, BoxLayout.Y_AXIS));
 
@@ -238,9 +262,74 @@ public class TPatcherWindow extends JFrame {
         loginpanel.add(Box.createRigidArea(new Dimension(20, 20)));
         loginpanel.add(loginButton);
 
-        adminTab.add(Box.createHorizontalGlue());
-        adminTab.add(loginpanel);
-        adminTab.add(Box.createHorizontalGlue());
+        adminTabEmpty.add(Box.createHorizontalGlue());
+        adminTabEmpty.add(loginpanel);
+        adminTabEmpty.add(Box.createHorizontalGlue());
+
+        oldProjectPathLabel = new JLabel("Path to old version:");
+        oldProjectPathLabel.setPreferredSize(new Dimension(120, 0));
+        oldProjectPathField = new JTextField(projectPath);
+        oldProjectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+        oldProjectPathField.setEditable(true);
+        chooseOldProjectButton = new Button("browse");
+        chooseOldProjectButton.setMaximumSize(new Dimension(0, 20));
+        JPanel oldProjectPathPanel = new JPanel();
+        oldProjectPathPanel.setLayout(new BoxLayout(oldProjectPathPanel, BoxLayout.X_AXIS));
+        oldProjectPathPanel.add(oldProjectPathLabel);
+        oldProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        oldProjectPathPanel.add(oldProjectPathField);
+        oldProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        oldProjectPathPanel.add(chooseOldProjectButton);
+        oldProjectPathPanel.add(Box.createHorizontalGlue());
+
+        newProjectPathLabel = new JLabel("Path to new version:");
+        newProjectPathLabel.setPreferredSize(new Dimension(120, 0));
+        newProjectPathField = new JTextField(projectPath);
+        newProjectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+        newProjectPathField.setEditable(true);
+        chooseNewProjectButton = new Button("browse");
+        chooseNewProjectButton.setMaximumSize(new Dimension(0, 20));
+        JPanel newProjectPathPanel = new JPanel();
+        newProjectPathPanel.setLayout(new BoxLayout(newProjectPathPanel, BoxLayout.X_AXIS));
+        newProjectPathPanel.add(newProjectPathLabel);
+        newProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        newProjectPathPanel.add(newProjectPathField);
+        newProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        newProjectPathPanel.add(chooseNewProjectButton);
+        newProjectPathPanel.add(Box.createHorizontalGlue());
+
+        adminPatchPathLabel = new JLabel("Path to patch:");
+        adminPatchPathLabel.setPreferredSize(new Dimension(120, 0));
+        adminPatchPathField = new JTextField(patchPath);
+        adminPatchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+        adminPatchPathField.setEditable(true);
+        adminChoosePatchButton = new Button("browse");
+        adminChoosePatchButton.setMaximumSize(new Dimension(0, 20));
+        JPanel patchPathPanel = new JPanel();
+        patchPathPanel.setLayout(new BoxLayout(patchPathPanel, BoxLayout.X_AXIS));
+        patchPathPanel.add(adminPatchPathLabel);
+        patchPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        patchPathPanel.add(adminPatchPathField);
+        patchPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        patchPathPanel.add(adminChoosePatchButton);
+        patchPathPanel.add(Box.createHorizontalGlue());
+
+        rememberPathsCheckbox = new Checkbox("Remember",
+                authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths"));
+
+        createPatchButton = new Button("Patch");
+        createPatchButton.setMaximumSize(new Dimension(50, 20));
+
+        adminTab = new JPanel();
+        adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.Y_AXIS));
+        adminTab.add(newProjectPathPanel);
+        adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
+        adminTab.add(oldProjectPathPanel);
+        adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
+        adminTab.add(patchPathPanel);
+        adminTab.add(Box.createVerticalGlue());
+        adminTab.add(rememberPathsCheckbox);
+        adminTab.add(createPatchButton);
     }
 
     private void setupEvents() {
@@ -311,6 +400,15 @@ public class TPatcherWindow extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 authWindow.setVisible(!authWindow.isVisible());
+            }
+        });
+
+        authWindow.btnConnect.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
+                    tabsWindow.setComponentAt(tabsNames.get("Admin"), adminTab);
+                }
             }
         });
     }
