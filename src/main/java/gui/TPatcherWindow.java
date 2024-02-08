@@ -343,24 +343,31 @@ public class TPatcherWindow extends JFrame {
         choosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                fileChooser = new JFileChooser();
-                int option = fileChooser.showOpenDialog(selfPointer);
-                if(option == JFileChooser.APPROVE_OPTION){
-                   File file = fileChooser.getSelectedFile();
-                   patchPathField.setText(file.getAbsolutePath());
-                }
+                choosePath(patchPathField);
+            }
+        });
+        adminChoosePatchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                choosePath(adminPatchPathField);
             }
         });
         chooseProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                fileChooser = new JFileChooser();
-                fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-                int option = fileChooser.showOpenDialog(selfPointer);
-                if(option == JFileChooser.APPROVE_OPTION){
-                   File file = fileChooser.getSelectedFile();
-                   projectPathField.setText(file.getAbsolutePath());
-                }
+                choosePath(projectPathField);
+            }
+        });
+        chooseNewProjectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                choosePath(newProjectPathField);
+            }
+        });
+        chooseOldProjectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                choosePath(oldProjectPathField);
             }
         });
         patchButton.addActionListener(new ActionListener() {
@@ -411,5 +418,15 @@ public class TPatcherWindow extends JFrame {
                 }
             }
         });
+    }
+
+    private void choosePath(JTextField field) {
+        fileChooser = new JFileChooser();
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        int option = fileChooser.showOpenDialog(selfPointer);
+        if(option == JFileChooser.APPROVE_OPTION){
+           File file = fileChooser.getSelectedFile();
+           field.setText(file.getAbsolutePath());
+        }
     }
 }
