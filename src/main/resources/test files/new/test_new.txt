@@ -1,0 +1,5 @@
+This is test file,
+the new one.
+точка
+This line is the same.
+This is addition line, wow.

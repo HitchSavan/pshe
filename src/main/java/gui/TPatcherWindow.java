@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 
@@ -84,8 +85,11 @@ public class TPatcherWindow extends JFrame {
     Button loginButton;
 
     int buttonColumnIndex = 0;
-    String projectPath;
-    String patchPath;
+    Path projectPath;
+    Path patchPath;
+    Path oldProjectPath;
+    Path newProjectPath;
+    Path patchFolderPath;
 
     public TPatcherWindow() {
         windowName = "PSHE patcher";
@@ -132,14 +136,18 @@ public class TPatcherWindow extends JFrame {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            projectPath = authWindow.config.getJSONObject("patchingInfo").getString("projectPath");
-            patchPath = authWindow.config.getJSONObject("patchingInfo").getString("patchPath");
+            projectPath = Paths.get(authWindow.config.getJSONObject("patchingInfo").getString("projectPath"));
+            patchPath = Paths.get(authWindow.config.getJSONObject("patchingInfo").getString("patchPath"));
             rememberPaths = authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths");
+
+            oldProjectPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("oldProjectPath"));
+            newProjectPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("newProjectPath"));
+            patchFolderPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("patchPath"));
         }
 
         projectPathLabel = new JLabel("Path to project:");
         projectPathLabel.setPreferredSize(new Dimension(90, 0));
-        projectPathField = new JTextField(projectPath);
+        projectPathField = new JTextField(projectPath.toString());
         projectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         projectPathField.setEditable(true);
         chooseProjectButton = new Button("browse");
@@ -155,7 +163,7 @@ public class TPatcherWindow extends JFrame {
 
         patchPathLabel = new JLabel("Path to patch:");
         patchPathLabel.setPreferredSize(new Dimension(90, 0));
-        patchPathField = new JTextField(patchPath);
+        patchPathField = new JTextField(patchPath.toString());
         patchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         patchPathField.setEditable(true);
         choosePatchButton = new Button("browse");
@@ -268,7 +276,7 @@ public class TPatcherWindow extends JFrame {
 
         oldProjectPathLabel = new JLabel("Path to old version:");
         oldProjectPathLabel.setPreferredSize(new Dimension(120, 0));
-        oldProjectPathField = new JTextField(projectPath);
+        oldProjectPathField = new JTextField(oldProjectPath.toString());
         oldProjectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         oldProjectPathField.setEditable(true);
         chooseOldProjectButton = new Button("browse");
@@ -284,7 +292,7 @@ public class TPatcherWindow extends JFrame {
 
         newProjectPathLabel = new JLabel("Path to new version:");
         newProjectPathLabel.setPreferredSize(new Dimension(120, 0));
-        newProjectPathField = new JTextField(projectPath);
+        newProjectPathField = new JTextField(newProjectPath.toString());
         newProjectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         newProjectPathField.setEditable(true);
         chooseNewProjectButton = new Button("browse");
@@ -298,9 +306,9 @@ public class TPatcherWindow extends JFrame {
         newProjectPathPanel.add(chooseNewProjectButton);
         newProjectPathPanel.add(Box.createHorizontalGlue());
 
-        adminPatchPathLabel = new JLabel("Path to patch:");
+        adminPatchPathLabel = new JLabel("Path to patch folder:");
         adminPatchPathLabel.setPreferredSize(new Dimension(120, 0));
-        adminPatchPathField = new JTextField(patchPath);
+        adminPatchPathField = new JTextField(patchPath.toString());
         adminPatchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         adminPatchPathField.setEditable(true);
         adminChoosePatchButton = new Button("browse");
@@ -322,9 +330,9 @@ public class TPatcherWindow extends JFrame {
 
         adminTab = new JPanel();
         adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.Y_AXIS));
-        adminTab.add(newProjectPathPanel);
-        adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
         adminTab.add(oldProjectPathPanel);
+        adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
+        adminTab.add(newProjectPathPanel);
         adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
         adminTab.add(patchPathPanel);
         adminTab.add(Box.createVerticalGlue());
@@ -343,44 +351,45 @@ public class TPatcherWindow extends JFrame {
         choosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(patchPathField);
+                choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         adminChoosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(adminPatchPathField);
+                choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY);
             }
         });
         chooseProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(projectPathField);
+                choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         chooseNewProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(newProjectPathField);
+                choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         chooseOldProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(oldProjectPathField);
+                choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         patchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                projectPath = projectPathField.getText();
-                patchPath = patchPathField.getText();
+                projectPath = Paths.get(projectPathField.getText());
+                patchPath = Paths.get(patchPathField.getText());
+                Path tmpProjectPath = Paths.get(projectPath.getParent().getParent().toString(), "tmp", projectPath.getFileName().toString());
 
                 if (!authWindow.config.has("patchingInfo")) {
                     authWindow.config.put("patchingInfo", new JSONObject());
                 }
-                authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath);
-                authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath);
+                authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
+                authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
                 authWindow.config.getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.getState());
 
                 try {
@@ -392,9 +401,57 @@ public class TPatcherWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
+                try {
+                    Files.createDirectories(tmpProjectPath.getParent());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+
                 RunCourgette courgetteInstance = new RunCourgette();
                 // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
-                String[] args = {"-apply", projectPathField.getText(), patchPathField.getText()};
+                String[] args = {"-apply", projectPath.toString(), patchPath.toString(), tmpProjectPath.toString()};
+                for (int i = 0; i < args.length; ++i) {
+                    System.out.print(args[i]);
+                    System.out.print("\t");
+                }
+                System.out.println();
+                courgetteInstance.run(args);
+            }
+        });
+        createPatchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                oldProjectPath = Paths.get(oldProjectPathField.getText());
+                newProjectPath = Paths.get(newProjectPathField.getText());
+                patchFolderPath = Paths.get(adminPatchPathField.getText());
+
+                if (!authWindow.config.has("patchCreationInfo")) {
+                    authWindow.config.put("patchCreationInfo", new JSONObject());
+                }
+                authWindow.config.getJSONObject("patchCreationInfo").put("patchPath", patchFolderPath.toString());
+                authWindow.config.getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
+                authWindow.config.getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
+                authWindow.config.getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.getState());
+
+                try {
+                    FileOutputStream jsonOutputStream;
+                    jsonOutputStream = new FileOutputStream("config.json");
+                    jsonOutputStream.write(authWindow.config.toString(4).getBytes());
+                    jsonOutputStream.close();
+                } catch (JSONException | IOException e1) {
+                    e1.printStackTrace();
+                }
+
+                try {
+                    Files.createDirectories(patchFolderPath);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+
+                RunCourgette courgetteInstance = new RunCourgette();
+                // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
+                String[] args = {"-gen", oldProjectPath.toString(), newProjectPath.toString(),
+                        Paths.get(patchFolderPath.toString(), oldProjectPath.getFileName().toString()).toString() + "_patch"};
                 for (int i = 0; i < args.length; ++i) {
                     System.out.print(args[i]);
                     System.out.print("\t");
@@ -420,9 +477,9 @@ public class TPatcherWindow extends JFrame {
         });
     }
 
-    private void choosePath(JTextField field) {
+    private void choosePath(JTextField field, int mode) {
         fileChooser = new JFileChooser();
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        fileChooser.setFileSelectionMode(mode);
         int option = fileChooser.showOpenDialog(selfPointer);
         if(option == JFileChooser.APPROVE_OPTION){
            File file = fileChooser.getSelectedFile();

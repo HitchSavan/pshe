@@ -19,11 +19,6 @@ public class UnpackResources {
         URL resourceURL = new URL(URLDecoder.decode(resourcePath, "UTF-8"));
         boolean fileFlag = new File(resourceURL.getPath()).isDirectory();
 
-        System.out.print("Extracting \t");
-        System.out.print(new File(resourceURL.getPath()));
-        System.out.print("\t");
-        System.out.println(fileFlag);
-
         if (resourceURL.getProtocol().equals("file")) {
             if (fileFlag) {
                 List<String> files = getResourceFiles(resourceName);
