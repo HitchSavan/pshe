@@ -76,6 +76,7 @@ public class TPatcherWindow extends JFrame {
     JFileChooser fileChooser;
 
     Checkbox rememberPathsCheckbox;
+    Checkbox replaceFilesCheckbox;
     Checkbox rememberAdminPathsCheckbox;
 
     Button patchButton;
@@ -126,6 +127,7 @@ public class TPatcherWindow extends JFrame {
         String configFilename = "config.json";
         authWindow.config = new JSONObject();
         boolean rememberPaths = false;
+        boolean replaceFiles = false;
 
         if (Files.exists(Paths.get(configFilename))) {
             File file = new File("config.json");
@@ -139,6 +141,7 @@ public class TPatcherWindow extends JFrame {
             projectPath = Paths.get(authWindow.config.getJSONObject("patchingInfo").getString("projectPath"));
             patchPath = Paths.get(authWindow.config.getJSONObject("patchingInfo").getString("patchPath"));
             rememberPaths = authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths");
+            replaceFiles = authWindow.config.getJSONObject("patchingInfo").getBoolean("replaceFiles");
 
             oldProjectPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("oldProjectPath"));
             newProjectPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("newProjectPath"));
@@ -178,6 +181,7 @@ public class TPatcherWindow extends JFrame {
         patchPathPanel.add(Box.createHorizontalGlue());
 
         rememberPathsCheckbox = new Checkbox("Remember", rememberPaths);
+        replaceFilesCheckbox = new Checkbox("Replace old files", replaceFiles);
 
         patchButton = new Button("Patch");
         patchButton.setMaximumSize(new Dimension(50, 20));
@@ -189,6 +193,7 @@ public class TPatcherWindow extends JFrame {
         mainTab.add(patchPathPanel);
         mainTab.add(Box.createVerticalGlue());
         mainTab.add(rememberPathsCheckbox);
+        mainTab.add(replaceFilesCheckbox);
         mainTab.add(patchButton);
     }
 
@@ -391,6 +396,7 @@ public class TPatcherWindow extends JFrame {
                 authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
                 authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
                 authWindow.config.getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.getState());
+                authWindow.config.getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.getState());
 
                 try {
                     FileOutputStream jsonOutputStream;
@@ -415,7 +421,20 @@ public class TPatcherWindow extends JFrame {
                     System.out.print("\t");
                 }
                 System.out.println();
-                courgetteInstance.run(args);
+                // courgetteInstance.setDaemon(true);
+                // courgetteInstance.run(args);
+                if (replaceFilesCheckbox.getState()) {
+                    // TODO: ADD NON-BLOCKING PATCHING
+                    try {
+                        courgetteInstance.runExec(args).waitFor();
+                        // courgetteInstance.join();
+                        Files.delete(projectPath);
+                        Files.move(tmpProjectPath, projectPath);
+                        Files.delete(tmpProjectPath.getParent());
+                    } catch (IOException | InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }
             }
         });
         createPatchButton.addActionListener(new ActionListener() {

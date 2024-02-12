@@ -6,7 +6,7 @@ public class RunCourgette extends Thread {
 
     static String[] courgetteArgs = null;
 
-    public static void runExec() throws IOException, InterruptedException {
+    public Process runExec(String[] args) throws IOException, InterruptedException {
         String os = System.getProperty("os.name").toLowerCase();
 
         System.out.println("OS name\t -> " + System.getProperty("os.name"));
@@ -15,24 +15,27 @@ public class RunCourgette extends Thread {
         System.out.println();
 
         UnpackResources.deleteDirectory("tmp");
+        Process courgette = null;
         if (os.contains("windows")) {
             UnpackResources.unpackResources("win");
-            Process courgette = RunExecutable.runExec("tmp/win/courgette.exe", courgetteArgs);
+            courgette = RunExecutable.runExec("tmp/win/courgette.exe", args);
         } else if (os.contains("linux")) {
             UnpackResources.unpackResources("linux");
-            Process courgette = RunExecutable.runExec("tmp/linux/courgette", courgetteArgs);
+            courgette = RunExecutable.runExec("tmp/linux/courgette", args);
         }
+
+        return courgette;
     }
     
     public void run(String[] args) {
         courgetteArgs = args;
-        run();
+        start();
     }
 
     @Override
     public void run() {
         try {
-            runExec();
+            runExec(courgetteArgs);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
