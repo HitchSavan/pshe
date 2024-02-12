@@ -313,7 +313,7 @@ public class TPatcherWindow extends JFrame {
 
         adminPatchPathLabel = new JLabel("Path to patch folder:");
         adminPatchPathLabel.setPreferredSize(new Dimension(120, 0));
-        adminPatchPathField = new JTextField(patchPath.toString());
+        adminPatchPathField = new JTextField(patchFolderPath.toString());
         adminPatchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         adminPatchPathField.setEditable(true);
         adminChoosePatchButton = new Button("browse");
@@ -356,31 +356,31 @@ public class TPatcherWindow extends JFrame {
         choosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
+                choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES, patchPath);
             }
         });
         adminChoosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY);
+                choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY, patchFolderPath);
             }
         });
         chooseProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+                choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES, projectPath);
             }
         });
         chooseNewProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+                choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES, newProjectPath);
             }
         });
         chooseOldProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+                choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES, oldProjectPath);
             }
         });
         patchButton.addActionListener(new ActionListener() {
@@ -484,8 +484,9 @@ public class TPatcherWindow extends JFrame {
         });
     }
 
-    private void choosePath(JTextField field, int mode) {
+    private void choosePath(JTextField field, int mode, Path defaultPath) {
         fileChooser = new JFileChooser();
+        fileChooser.setCurrentDirectory(defaultPath.getParent().toFile());
         fileChooser.setFileSelectionMode(mode);
         int option = fileChooser.showOpenDialog(selfPointer);
         if(option == JFileChooser.APPROVE_OPTION){
