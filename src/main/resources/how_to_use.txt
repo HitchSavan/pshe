@@ -1,2 +1,5 @@
-./courgette -gen old_file new_file output.diff
-courgette.exe -gen old_file new_file output.diff
+./courgette -gen old_file new_file patch_file
+courgette.exe -gen old_file new_file patch_file
+
+./courgette -apply old_file patch_file new_file
+courgette.exe -apply old_file patch_file new_file
