@@ -1,10 +1,13 @@
 package gui.utils;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class RunCourgette extends Thread {
 
-    static String[] courgetteArgs = null;
+    String[] courgetteArgs = null;
+    boolean replaceFiles;
 
     public Process runExec(String[] args) throws IOException, InterruptedException {
         String os = System.getProperty("os.name").toLowerCase();
@@ -24,11 +27,20 @@ public class RunCourgette extends Thread {
             courgette = RunExecutable.runExec("tmp/linux/courgette", args);
         }
 
+        if (replaceFiles) {
+            courgette.waitFor();
+            
+            Files.delete(Paths.get(args[1]));
+            Files.move(Paths.get(args[3]), Paths.get(args[1]));
+            Files.delete(Paths.get(args[3]).getParent());
+        }
+        
         return courgette;
     }
     
-    public void run(String[] args) {
+    public void run(String[] args, boolean _replaceFiles) {
         courgetteArgs = args;
+        replaceFiles = _replaceFiles;
         start();
     }
 

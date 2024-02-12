@@ -421,20 +421,8 @@ public class TPatcherWindow extends JFrame {
                     System.out.print("\t");
                 }
                 System.out.println();
-                // courgetteInstance.setDaemon(true);
-                // courgetteInstance.run(args);
-                if (replaceFilesCheckbox.getState()) {
-                    // TODO: ADD NON-BLOCKING PATCHING
-                    try {
-                        courgetteInstance.runExec(args).waitFor();
-                        // courgetteInstance.join();
-                        Files.delete(projectPath);
-                        Files.move(tmpProjectPath, projectPath);
-                        Files.delete(tmpProjectPath.getParent());
-                    } catch (IOException | InterruptedException e1) {
-                        e1.printStackTrace();
-                    }
-                }
+                courgetteInstance.setDaemon(true);
+                courgetteInstance.run(args, replaceFilesCheckbox.getState());
             }
         });
         createPatchButton.addActionListener(new ActionListener() {
@@ -476,7 +464,7 @@ public class TPatcherWindow extends JFrame {
                     System.out.print("\t");
                 }
                 System.out.println();
-                courgetteInstance.run(args);
+                courgetteInstance.run(args, false);
             }
         });
         loginButton.addActionListener(new ActionListener() {
