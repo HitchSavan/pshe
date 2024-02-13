@@ -40,7 +40,6 @@ import org.json.JSONObject;
 import gui.utils.ButtonColumn;
 import gui.utils.FileVisitor;
 import gui.utils.Patcher;
-import gui.utils.RunCourgette;
 import gui.utils.UnpackResources;
 
 public class TPatcherWindow extends JFrame {
@@ -391,7 +390,7 @@ public class TPatcherWindow extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 projectPath = Paths.get(projectPathField.getText());
                 patchPath = Paths.get(patchPathField.getText());
-                Path tmpProjectPath = Paths.get(projectPath.getParent().getParent().toString(), "tmp", projectPath.getFileName().toString());
+                Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
 
                 if (!authWindow.config.has("patchingInfo")) {
                     authWindow.config.put("patchingInfo", new JSONObject());
@@ -410,22 +409,54 @@ public class TPatcherWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
+                FileVisitor fileVisitor = new FileVisitor();
+
+                ArrayList<Path> oldFiles = new ArrayList<>();
+                ArrayList<Path> patchFiles = new ArrayList<>();
+
                 try {
-                    Files.createDirectories(tmpProjectPath.getParent());
+                    Files.walkFileTree(projectPath, fileVisitor);
+                    oldFiles = new ArrayList<>(fileVisitor.allFiles);
+                    fileVisitor.allFiles.clear();
+
+                    Files.walkFileTree(patchPath, fileVisitor);
+                    patchFiles = new ArrayList<>(fileVisitor.allFiles);
+                    fileVisitor.allFiles.clear();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
 
-                RunCourgette courgetteInstance = new RunCourgette();
-                // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
-                String[] args = {"-apply", projectPath.toString(), patchPath.toString(), tmpProjectPath.toString()};
-                for (int i = 0; i < args.length; ++i) {
-                    System.out.print(args[i]);
-                    System.out.print("\t");
+                Path relativePatchPath;
+                Path newPath;
+                Path oldPath;
+                byte[] emptyData = {0};
+        
+                for (Path patchFile: patchFiles) {
+        
+                    relativePatchPath = patchPath.relativize(patchFile);
+                    newPath = Paths.get(tmpProjectPath.toString(),
+                            relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+                    oldPath = Paths.get(projectPath.toString(),
+                            relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+
+                    if (!oldFiles.contains(oldPath)) {
+                        try {
+                            Files.createFile(oldPath);
+                            Files.write(oldPath, emptyData);
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+        
+                    try {
+                        System.out.println(newPath.getParent());
+                        Files.createDirectories(newPath.getParent());
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+        
+                    Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.getState());
                 }
-                System.out.println();
-                courgetteInstance.setDaemon(true);
-                courgetteInstance.run(args, replaceFilesCheckbox.getState());
             }
         });
         createPatchButton.addActionListener(new ActionListener() {
@@ -449,12 +480,6 @@ public class TPatcherWindow extends JFrame {
                     jsonOutputStream.write(authWindow.config.toString(4).getBytes());
                     jsonOutputStream.close();
                 } catch (JSONException | IOException e1) {
-                    e1.printStackTrace();
-                }
-
-                try {
-                    Files.createDirectories(patchFolderPath);
-                } catch (IOException e1) {
                     e1.printStackTrace();
                 }
 
