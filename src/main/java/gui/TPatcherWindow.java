@@ -39,6 +39,7 @@ import org.json.JSONObject;
 
 import gui.utils.ButtonColumn;
 import gui.utils.FileVisitor;
+import gui.utils.Patcher;
 import gui.utils.RunCourgette;
 import gui.utils.UnpackResources;
 
@@ -465,78 +466,17 @@ public class TPatcherWindow extends JFrame {
                 try {
                     Files.walkFileTree(oldProjectPath, fileVisitor);
                     oldFiles = new ArrayList<>(fileVisitor.allFiles);
+                    fileVisitor.allFiles.clear();
 
                     Files.walkFileTree(newProjectPath, fileVisitor);
                     newFiles = new ArrayList<>(fileVisitor.allFiles);
+                    fileVisitor.allFiles.clear();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
                 
-                Path relativeOldPath;
-                Path newPath;
-                Path patchFile;
-                byte[] emptyData = {0};
-
-                for (Path oldFile: oldFiles) {
-
-                    relativeOldPath = oldProjectPath.relativize(oldFile);
-                    newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
-                    patchFile = Paths.get(patchFolderPath.toString(), relativeOldPath.toString()).normalize();
-
-                    if (!newFiles.contains(newPath)) {
-                        try {
-                            Files.createFile(newPath);
-                            Files.write(newPath, emptyData);
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-
-                    try {
-                        Files.createDirectories(patchFile.getParent());
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                    }
-
-                    RunCourgette courgetteInstance = new RunCourgette();
-                    String[] args = {"-gen", oldFile.toString(), newPath.toString(),
-                            Paths.get(patchFolderPath.toString(), relativeOldPath.toString()).toString() + "_patch"};
-                    for (int k = 0; k < args.length; ++k) {
-                        System.out.print(args[k]);
-                        System.out.print("\t");
-                    }
-                    System.out.println();
-                    courgetteInstance.run(args, false);
-                }
-
-                Path relativeNewPath;
-                Path oldPath;
-                for (Path newFile: newFiles) {
-                    
-                    relativeNewPath = newProjectPath.relativize(newFile);
-                    oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
-                    patchFile = Paths.get(patchFolderPath.toString(), relativeNewPath.toString()).normalize();
-
-                    if (!oldFiles.contains(oldPath)) {
-                        try {
-                            Files.createFile(oldPath);
-                            Files.write(oldPath, emptyData);
-                            Files.createDirectories(patchFile.getParent());
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
-    
-                        RunCourgette courgetteInstance = new RunCourgette();
-                        String[] args = {"-gen", oldPath.toString(), newFile.toString(),
-                                Paths.get(patchFolderPath.toString(), relativeNewPath.toString()).toString() + "_patch"};
-                        for (int k = 0; k < args.length; ++k) {
-                            System.out.print(args[k]);
-                            System.out.print("\t");
-                        }
-                        System.out.println();
-                        courgetteInstance.run(args, false);
-                    }
-                }
+                generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward");
+                generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward");
             }
         });
         loginButton.addActionListener(new ActionListener() {
@@ -554,6 +494,53 @@ public class TPatcherWindow extends JFrame {
                 }
             }
         });
+    }
+
+    private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles, ArrayList<Path> newFiles, String patchSubfolder) {
+        Path relativeOldPath;
+        Path newPath;
+        Path patchFile;
+        byte[] emptyData = {0};
+
+        for (Path oldFile: oldFiles) {
+
+            relativeOldPath = oldProjectPath.relativize(oldFile);
+            newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
+            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeOldPath.toString() + "_patch").normalize();
+
+            if (oldFile.toFile().length() <= 1 || newPath.toFile().length() <= 1) {
+                continue;
+            }
+
+            try {
+                Files.createDirectories(patchFile.getParent());
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
+            Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString());
+        }
+
+        Path relativeNewPath;
+        Path oldPath;
+        for (Path newFile: newFiles) {
+            
+            relativeNewPath = newProjectPath.relativize(newFile);
+            oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
+            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeNewPath.toString() + "_patch").normalize();
+
+            if (!oldFiles.contains(oldPath)) {
+                try {
+                    Files.createFile(oldPath);
+                    Files.write(oldPath, emptyData);
+                    Files.createDirectories(patchFile.getParent());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+
+                Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString());
+            }
+        }
     }
 
     private void choosePath(JTextField field, int mode, Path defaultPath) {
