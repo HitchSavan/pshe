@@ -1,4 +1,4 @@
-package gui;
+package user_client.gui;
 
 import java.awt.Button;
 import java.awt.Checkbox;
@@ -37,10 +37,10 @@ import javax.swing.table.TableColumnModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import gui.utils.ButtonColumn;
-import gui.utils.FileVisitor;
-import gui.utils.Patcher;
-import gui.utils.UnpackResources;
+import user_client.gui.utils.ButtonColumn;
+import user_client.gui.utils.FileVisitor;
+import user_client.gui.utils.Patcher;
+import user_client.gui.utils.UnpackResources;
 
 public class TPatcherWindow extends JFrame {
 

@@ -1,4 +1,4 @@
-package gui.utils;
+package user_client.gui.utils;
 
 public class Patcher {
 

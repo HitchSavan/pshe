@@ -23,11 +23,11 @@
       <version>20231013</version>
     </dependency>
     
-    <dependency>
+    <!-- <dependency>
       <groupId>org.bitbucket.cowwoc</groupId>
       <artifactId>diff-match-patch</artifactId>
       <version>1.2</version>
-    </dependency>
+    </dependency> -->
     
     <!-- <dependency>
       <groupId>pshe_patcher</groupId>
@@ -79,7 +79,7 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>ClientMain</mainClass>
+              <mainClass>user_client.ClientMain</mainClass>
             </manifest>
           </archive>
         </configuration>

@@ -2,8 +2,8 @@
 <launch4jConfig>
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
-  <jar>D:\projects\pshe\PSHE_user_client\target\PSHE_Client-closedalpha.0.0.1.one-jar.jar</jar>
-  <outfile>D:\projects\pshe\PSHE_user_client\patcher_ui.exe</outfile>
+  <jar>D:\projects\Jabix\pshe\PSHE_user_client\target\PSHE_Client-closedalpha.0.0.1.one-jar.jar</jar>
+  <outfile>D:\projects\Jabix\pshe\PSHE_user_client\patcher_ui.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>
