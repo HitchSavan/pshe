@@ -115,6 +115,7 @@ public class TPatcherWindow extends JFrame {
         this.add(tabsWindow);
 
         this.setMinimumSize(new Dimension(300, 200));
+        this.setSize(new Dimension(600, 200));
         this.setTitle(windowName);
         this.setLocationRelativeTo(null);
         this.setVisible(true);
@@ -434,9 +435,11 @@ public class TPatcherWindow extends JFrame {
                 for (Path patchFile: patchFiles) {
         
                     relativePatchPath = patchPath.relativize(patchFile);
-                    newPath = Paths.get(tmpProjectPath.toString(),
+                    newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
+                            Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
+                                    tmpProjectPath.getFileName().toString()).toString() :
                             relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
-                    oldPath = Paths.get(projectPath.toString(),
+                    oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
                             relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
 
                     if (!oldFiles.contains(oldPath)) {
@@ -449,7 +452,6 @@ public class TPatcherWindow extends JFrame {
                     }
         
                     try {
-                        System.out.println(newPath.getParent());
                         Files.createDirectories(newPath.getParent());
                     } catch (IOException e1) {
                         e1.printStackTrace();
@@ -531,7 +533,8 @@ public class TPatcherWindow extends JFrame {
 
             relativeOldPath = oldProjectPath.relativize(oldFile);
             newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
-            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeOldPath.toString() + "_patch").normalize();
+            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder,
+                    (relativeOldPath.toString().equals("") ? oldFile.getFileName() : relativeOldPath.toString()) + "_patch").normalize();
 
             if (oldFile.toFile().length() <= 1 || newPath.toFile().length() <= 1) {
                 continue;
