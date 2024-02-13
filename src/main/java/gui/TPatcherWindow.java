@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.swing.AbstractAction;
@@ -37,6 +38,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import gui.utils.ButtonColumn;
+import gui.utils.FileVisitor;
 import gui.utils.RunCourgette;
 import gui.utils.UnpackResources;
 
@@ -330,8 +332,8 @@ public class TPatcherWindow extends JFrame {
         rememberPathsCheckbox = new Checkbox("Remember",
                 authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths"));
 
-        createPatchButton = new Button("Patch");
-        createPatchButton.setMaximumSize(new Dimension(50, 20));
+        createPatchButton = new Button("Create patch");
+        createPatchButton.setMaximumSize(new Dimension(100, 20));
 
         adminTab = new JPanel();
         adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.Y_AXIS));
@@ -455,16 +457,86 @@ public class TPatcherWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
-                RunCourgette courgetteInstance = new RunCourgette();
-                // TODO: USE RECURSIVE FILE ITERATION FOR PATCHING FOLDER (PROJECT)
-                String[] args = {"-gen", oldProjectPath.toString(), newProjectPath.toString(),
-                        Paths.get(patchFolderPath.toString(), oldProjectPath.getFileName().toString()).toString() + "_patch"};
-                for (int i = 0; i < args.length; ++i) {
-                    System.out.print(args[i]);
-                    System.out.print("\t");
+                FileVisitor fileVisitor = new FileVisitor();
+
+                ArrayList<Path> oldFiles = new ArrayList<>();
+                ArrayList<Path> newFiles = new ArrayList<>();
+
+                try {
+                    Files.walkFileTree(oldProjectPath, fileVisitor);
+                    oldFiles = new ArrayList<>(fileVisitor.allFiles);
+
+                    Files.walkFileTree(newProjectPath, fileVisitor);
+                    newFiles = new ArrayList<>(fileVisitor.allFiles);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
                 }
-                System.out.println();
-                courgetteInstance.run(args, false);
+                
+                Path relativeOldPath;
+                Path newPath;
+                Path patchFile;
+                byte[] emptyData = {0};
+
+                for (Path oldFile: oldFiles) {
+
+                    relativeOldPath = oldProjectPath.relativize(oldFile);
+                    newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
+                    patchFile = Paths.get(patchFolderPath.toString(), relativeOldPath.toString()).normalize();
+
+                    if (!newFiles.contains(newPath)) {
+                        try {
+                            Files.createFile(newPath);
+                            Files.write(newPath, emptyData);
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+
+                    try {
+                        Files.createDirectories(patchFile.getParent());
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+
+                    RunCourgette courgetteInstance = new RunCourgette();
+                    String[] args = {"-gen", oldFile.toString(), newPath.toString(),
+                            Paths.get(patchFolderPath.toString(), relativeOldPath.toString()).toString() + "_patch"};
+                    for (int k = 0; k < args.length; ++k) {
+                        System.out.print(args[k]);
+                        System.out.print("\t");
+                    }
+                    System.out.println();
+                    courgetteInstance.run(args, false);
+                }
+
+                Path relativeNewPath;
+                Path oldPath;
+                for (Path newFile: newFiles) {
+                    
+                    relativeNewPath = newProjectPath.relativize(newFile);
+                    oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
+                    patchFile = Paths.get(patchFolderPath.toString(), relativeNewPath.toString()).normalize();
+
+                    if (!oldFiles.contains(oldPath)) {
+                        try {
+                            Files.createFile(oldPath);
+                            Files.write(oldPath, emptyData);
+                            Files.createDirectories(patchFile.getParent());
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+    
+                        RunCourgette courgetteInstance = new RunCourgette();
+                        String[] args = {"-gen", oldPath.toString(), newFile.toString(),
+                                Paths.get(patchFolderPath.toString(), relativeNewPath.toString()).toString() + "_patch"};
+                        for (int k = 0; k < args.length; ++k) {
+                            System.out.print(args[k]);
+                            System.out.print("\t");
+                        }
+                        System.out.println();
+                        courgetteInstance.run(args, false);
+                    }
+                }
             }
         });
         loginButton.addActionListener(new ActionListener() {

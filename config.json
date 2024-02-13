@@ -11,9 +11,9 @@
     },
     "patchCreationInfo": {
         "rememberPaths": true,
-        "patchPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\src\\main\\resources\\test files\\патч",
-        "newProjectPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\src\\main\\resources\\test files\\new\\exel2.xlsx",
-        "oldProjectPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\src\\main\\resources\\test files\\old\\exel1.xlsx"
+        "patchPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\test files\\патч",
+        "newProjectPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\test files\\new",
+        "oldProjectPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\test files\\old"
     },
     "reopenWindow": true
 }
