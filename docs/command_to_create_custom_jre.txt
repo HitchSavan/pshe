@@ -1,1 +1,2 @@
+jdeps .\target\PSHE_Client-closedalpha.0.0.1.one-jar.jar
 jlink --add-modules java.base,java.desktop --output jre --compress=2
