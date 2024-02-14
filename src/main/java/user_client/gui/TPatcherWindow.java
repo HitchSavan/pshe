@@ -573,7 +573,9 @@ public class TPatcherWindow extends JFrame {
 
     private void choosePath(JTextField field, int mode, Path defaultPath) {
         fileChooser = new JFileChooser();
-        fileChooser.setCurrentDirectory(defaultPath.getParent().toFile());
+        if (defaultPath.getParent() != null) {
+            fileChooser.setCurrentDirectory(defaultPath.getParent().toFile());
+        }
         fileChooser.setFileSelectionMode(mode);
         int option = fileChooser.showOpenDialog(selfPointer);
         if(option == JFileChooser.APPROVE_OPTION){
