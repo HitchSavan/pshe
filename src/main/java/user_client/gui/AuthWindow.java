@@ -66,10 +66,31 @@ public class AuthWindow extends JFrame {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        } else {
+            config.put("userInfo", new JSONObject().put("login", "").put("pass", ""));
+            config.put("patchingInfo", new JSONObject()
+                    .put("rememberPaths", false)
+                    .put("replaceFiles", false)
+                    .put("projectPath", "")
+                    .put("patchPath", ""));
+            config.put("patchCreationInfo", new JSONObject()
+                    .put("rememberPaths", false)
+                    .put("patchPath", "")
+                    .put("newProjectPath", "")
+                    .put("oldProjectPath", ""));
 
-            userLogin = config.getJSONObject("userInfo").getString("login");
-            userPassword = config.getJSONObject("userInfo").getString("pass");
+            try {
+                FileOutputStream jsonOutputStream;
+                jsonOutputStream = new FileOutputStream("config.json");
+                jsonOutputStream.write(config.toString(4).getBytes());
+                jsonOutputStream.close();
+            } catch (JSONException | IOException e1) {
+                e1.printStackTrace();
+            }
         }
+
+        userLogin = config.getJSONObject("userInfo").getString("login");
+        userPassword = config.getJSONObject("userInfo").getString("pass");
 
         startPanel = new JPanel();
         startPanel.setLayout(new BoxLayout(startPanel, BoxLayout.Y_AXIS));
