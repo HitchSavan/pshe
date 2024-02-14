@@ -9,7 +9,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class UnpackResources {
-    public static void copyFromJar(String source, String target) throws IOException {
+    public static void unpackResources(String source, String target) throws IOException {
         InputStream is = UnpackResources.class.getResourceAsStream(source + ".zip");
         ZipInputStream zis = new ZipInputStream(is);
 

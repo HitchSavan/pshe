@@ -9,31 +9,35 @@ public class RunCourgette extends Thread {
     String[] courgetteArgs = null;
     boolean replaceFiles;
 
+    public static void unpackCourgette() {
+        String os = System.getProperty("os.name").toLowerCase();
+        UnpackResources.deleteDirectory("tmp");
+
+        try {
+            if (os.contains("windows")) {
+                UnpackResources.unpackResources("/win", "tmp");
+            } else if (os.contains("linux")) {
+                UnpackResources.unpackResources("/linux", "tmp");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public Process runExec(String[] args) throws IOException, InterruptedException {
         String os = System.getProperty("os.name").toLowerCase();
-
+        
         System.out.println("OS name\t -> " + System.getProperty("os.name"));
         System.out.println("OS version\t -> " + System.getProperty("os.version"));
         System.out.println("OS Architecture\t -> " + System.getProperty("os.arch"));
         System.out.println();
 
-        UnpackResources.deleteDirectory("tmp");
         Process courgette = null;
-            if (os.contains("windows")) {
-                try {
-                    UnpackResources.copyFromJar("/win", "tmp");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                courgette = RunExecutable.runExec("tmp/win/courgette.exe", args);
-            } else if (os.contains("linux")) {
-                try {
-                    UnpackResources.copyFromJar("/linux", "tmp");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                courgette = RunExecutable.runExec("tmp/linux/courgette", args);
-            }
+        if (os.contains("windows")) {
+            courgette = RunExecutable.runExec("tmp/win/courgette.exe", args);
+        } else if (os.contains("linux")) {
+            courgette = RunExecutable.runExec("tmp/linux/courgette", args);
+        }
 
         if (replaceFiles) {
             courgette.waitFor();

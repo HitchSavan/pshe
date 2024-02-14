@@ -359,31 +359,31 @@ public class TPatcherWindow extends JFrame {
         choosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES, patchPath);
+                choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         adminChoosePatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY, patchFolderPath);
+                choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY);
             }
         });
         chooseProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES, projectPath);
+                choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         chooseNewProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES, newProjectPath);
+                choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         chooseOldProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES, oldProjectPath);
+                choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
         patchButton.addActionListener(new ActionListener() {
@@ -569,6 +569,10 @@ public class TPatcherWindow extends JFrame {
                 Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString());
             }
         }
+    }
+
+    private void choosePath(JTextField field, int mode) {
+        choosePath(field, mode, Paths.get(field.getText()));
     }
 
     private void choosePath(JTextField field, int mode, Path defaultPath) {
