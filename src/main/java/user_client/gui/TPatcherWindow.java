@@ -40,6 +40,7 @@ import org.json.JSONObject;
 import user_client.gui.utils.ButtonColumn;
 import user_client.gui.utils.FileVisitor;
 import user_client.gui.utils.Patcher;
+import user_client.gui.utils.RunCourgette;
 import user_client.gui.utils.UnpackResources;
 
 public class TPatcherWindow extends JFrame {
@@ -94,6 +95,9 @@ public class TPatcherWindow extends JFrame {
     Path newProjectPath;
     Path patchFolderPath;
 
+    JLabel activeCourgetesAmount;
+    JLabel activeCourgetesAdminAmount;
+
     public TPatcherWindow() {
         windowName = "PSHE patcher";
         authWindow = new AuthWindow();
@@ -114,8 +118,8 @@ public class TPatcherWindow extends JFrame {
 
         this.add(tabsWindow);
 
-        this.setMinimumSize(new Dimension(300, 200));
-        this.setSize(new Dimension(600, 200));
+        this.setMinimumSize(new Dimension(300, 210));
+        this.setSize(new Dimension(600, 210));
         this.setTitle(windowName);
         this.setLocationRelativeTo(null);
         this.setVisible(true);
@@ -189,6 +193,9 @@ public class TPatcherWindow extends JFrame {
         patchButton = new Button("Patch");
         patchButton.setMaximumSize(new Dimension(50, 20));
 
+        activeCourgetesAmount = new JLabel("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeCourgetesAmount.setAlignmentX(CENTER_ALIGNMENT);
+
         mainTab = new JPanel();
         mainTab.setLayout(new BoxLayout(mainTab, BoxLayout.Y_AXIS));
         mainTab.add(projectPathPanel);
@@ -198,6 +205,7 @@ public class TPatcherWindow extends JFrame {
         mainTab.add(rememberPathsCheckbox);
         mainTab.add(replaceFilesCheckbox);
         mainTab.add(patchButton);
+        mainTab.add(activeCourgetesAmount);
     }
 
     private void setupHistoryTabUi() {
@@ -259,7 +267,6 @@ public class TPatcherWindow extends JFrame {
         historyTab.add(new JScrollPane(table));
     }
 
-    // TODO: ADD SUCCESSFUL AUTHORIZATION INTERFACE UPDATE
     private void setupAdminTabUi() {
         adminTabEmpty = new JPanel();
         adminTabEmpty.setLayout(new BoxLayout(adminTabEmpty, BoxLayout.X_AXIS));
@@ -336,6 +343,9 @@ public class TPatcherWindow extends JFrame {
         createPatchButton = new Button("Create patch");
         createPatchButton.setMaximumSize(new Dimension(100, 20));
 
+        activeCourgetesAdminAmount = new JLabel("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeCourgetesAdminAmount.setAlignmentX(CENTER_ALIGNMENT);
+
         adminTab = new JPanel();
         adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.Y_AXIS));
         adminTab.add(oldProjectPathPanel);
@@ -346,6 +356,7 @@ public class TPatcherWindow extends JFrame {
         adminTab.add(Box.createVerticalGlue());
         adminTab.add(rememberPathsCheckbox);
         adminTab.add(createPatchButton);
+        adminTab.add(activeCourgetesAdminAmount);
     }
 
     private void setupEvents() {
@@ -457,7 +468,7 @@ public class TPatcherWindow extends JFrame {
                         e1.printStackTrace();
                     }
         
-                    Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.getState());
+                    Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.getState(), activeCourgetesAmount);
                 }
             }
         });
@@ -502,8 +513,8 @@ public class TPatcherWindow extends JFrame {
                     e1.printStackTrace();
                 }
                 
-                generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward");
-                generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward");
+                generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesAdminAmount);
+                generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesAdminAmount);
             }
         });
         loginButton.addActionListener(new ActionListener() {
@@ -523,7 +534,8 @@ public class TPatcherWindow extends JFrame {
         });
     }
 
-    private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles, ArrayList<Path> newFiles, String patchSubfolder) {
+    private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles,
+            ArrayList<Path> newFiles, String patchSubfolder, JLabel updatingComponent) {
         Path relativeOldPath;
         Path newPath;
         Path patchFile;
@@ -546,7 +558,7 @@ public class TPatcherWindow extends JFrame {
                 e1.printStackTrace();
             }
 
-            Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString());
+            Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
         }
 
         Path relativeNewPath;
@@ -566,7 +578,7 @@ public class TPatcherWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
-                Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString());
+                Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
             }
         }
     }
