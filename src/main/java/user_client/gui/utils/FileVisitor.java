@@ -10,9 +10,16 @@ import java.util.ArrayList;
 public class FileVisitor extends SimpleFileVisitor<Path> {
 
     public ArrayList<Path> allFiles = new ArrayList<>();
+    private ArrayList<PatternMatcher> patterns = new ArrayList<>();
+
+    public FileVisitor() {
+        
+    }
 
     @Override
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+
+
         
         allFiles.add(file.toAbsolutePath());
  
