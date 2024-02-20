@@ -1,4 +1,4 @@
-package user_client.gui.utils;
+package user_client.gui;
 
 import java.awt.*;
 import java.awt.event.*;

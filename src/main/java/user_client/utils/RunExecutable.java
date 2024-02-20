@@ -1,4 +1,4 @@
-package user_client.gui.utils;
+package user_client.utils;
 
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
@@ -16,8 +16,8 @@ public class RunExecutable {
         params = parametrizedCommand.toArray(params);
 
         ProcessBuilder pb = new ProcessBuilder(params);
-        pb.redirectOutput(Redirect.INHERIT);
-        pb.redirectError(Redirect.INHERIT);
+        // pb.redirectOutput(Redirect.INHERIT);
+        // pb.redirectError(Redirect.INHERIT);
         return pb.start();
     }
     public static Process runExec(String command) throws IOException {

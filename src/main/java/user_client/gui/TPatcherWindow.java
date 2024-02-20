@@ -37,11 +37,10 @@ import javax.swing.table.TableColumnModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import user_client.gui.utils.ButtonColumn;
-import user_client.gui.utils.FileVisitor;
-import user_client.gui.utils.Patcher;
-import user_client.gui.utils.RunCourgette;
-import user_client.gui.utils.UnpackResources;
+import user_client.utils.FileVisitor;
+import user_client.utils.Patcher;
+import user_client.utils.RunCourgette;
+import user_client.utils.UnpackResources;
 
 public class TPatcherWindow extends JFrame {
 
@@ -82,7 +81,7 @@ public class TPatcherWindow extends JFrame {
     Checkbox replaceFilesCheckbox;
     Checkbox rememberAdminPathsCheckbox;
 
-    Button patchButton;
+    Button applyPatchButton;
     Button createPatchButton;
 
     JLabel loginMessage;
@@ -137,7 +136,7 @@ public class TPatcherWindow extends JFrame {
         boolean replaceFiles = false;
 
         if (Files.exists(Paths.get(configFilename))) {
-            File file = new File("config.json");
+            File file = new File(configFilename);
             String content;
             try {
                 content = new String(Files.readAllBytes(Paths.get(file.toURI())));
@@ -190,8 +189,8 @@ public class TPatcherWindow extends JFrame {
         rememberPathsCheckbox = new Checkbox("Remember", rememberPaths);
         replaceFilesCheckbox = new Checkbox("Replace old files", replaceFiles);
 
-        patchButton = new Button("Patch");
-        patchButton.setMaximumSize(new Dimension(50, 20));
+        applyPatchButton = new Button("Patch");
+        applyPatchButton.setMaximumSize(new Dimension(50, 20));
 
         activeCourgetesAmount = new JLabel("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
         activeCourgetesAmount.setAlignmentX(CENTER_ALIGNMENT);
@@ -204,7 +203,7 @@ public class TPatcherWindow extends JFrame {
         mainTab.add(Box.createVerticalGlue());
         mainTab.add(rememberPathsCheckbox);
         mainTab.add(replaceFilesCheckbox);
-        mainTab.add(patchButton);
+        mainTab.add(applyPatchButton);
         mainTab.add(activeCourgetesAmount);
     }
 
@@ -397,7 +396,7 @@ public class TPatcherWindow extends JFrame {
                 choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
             }
         });
-        patchButton.addActionListener(new ActionListener() {
+        applyPatchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 projectPath = Paths.get(projectPathField.getText());
@@ -496,22 +495,16 @@ public class TPatcherWindow extends JFrame {
                     e1.printStackTrace();
                 }
 
-                FileVisitor fileVisitor = new FileVisitor();
+                FileVisitor fileVisitor = new FileVisitor(newProjectPath);
 
                 ArrayList<Path> oldFiles = new ArrayList<>();
                 ArrayList<Path> newFiles = new ArrayList<>();
 
-                try {
-                    Files.walkFileTree(oldProjectPath, fileVisitor);
-                    oldFiles = new ArrayList<>(fileVisitor.allFiles);
-                    fileVisitor.allFiles.clear();
+                fileVisitor.walkFileTree(oldProjectPath);
+                oldFiles = new ArrayList<>(fileVisitor.allFiles);
 
-                    Files.walkFileTree(newProjectPath, fileVisitor);
-                    newFiles = new ArrayList<>(fileVisitor.allFiles);
-                    fileVisitor.allFiles.clear();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
+                fileVisitor.walkFileTree(newProjectPath);
+                newFiles = new ArrayList<>(fileVisitor.allFiles);
                 
                 generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesAdminAmount);
                 generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesAdminAmount);

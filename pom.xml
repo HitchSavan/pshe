@@ -36,6 +36,14 @@
       <scope>system</scope>
       <systemPath>${pom.basedir}/lib/PSHE_Patcher-closedalpha.0.0.1.jar</systemPath>
     </dependency> -->
+
+    <dependency>
+      <groupId>com.github.shyiko.klob</groupId>
+      <artifactId>klob</artifactId>
+      <version>0.2.0</version>
+      <!-- omit classifier below if you plan to use this library in koltin -->
+      <classifier>kalvanized</classifier>
+    </dependency>
   </dependencies>
 
 	<build>

@@ -1,4 +1,4 @@
-package user_client.gui.utils;
+package user_client.utils;
 
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
