@@ -24,12 +24,6 @@
     </dependency>
     
     <!-- <dependency>
-      <groupId>org.bitbucket.cowwoc</groupId>
-      <artifactId>diff-match-patch</artifactId>
-      <version>1.2</version>
-    </dependency> -->
-    
-    <!-- <dependency>
       <groupId>pshe_patcher</groupId>
       <artifactId>PSHE_Patcher</artifactId>
       <version>closedalpha.0.0.1</version>
@@ -41,7 +35,6 @@
       <groupId>com.github.shyiko.klob</groupId>
       <artifactId>klob</artifactId>
       <version>0.2.0</version>
-      <!-- omit classifier below if you plan to use this library in koltin -->
       <classifier>kalvanized</classifier>
     </dependency>
   </dependencies>
