@@ -42,10 +42,10 @@ import user_client.utils.Patcher;
 import user_client.utils.RunCourgette;
 import user_client.utils.UnpackResources;
 
-public class TPatcherWindow extends JFrame {
+public class PatcherWindow extends JFrame {
 
     String windowName;
-    TPatcherWindow selfPointer = this;
+    PatcherWindow selfPointer = this;
     AuthWindow authWindow;
 
     JTabbedPane tabsWindow;
@@ -97,7 +97,7 @@ public class TPatcherWindow extends JFrame {
     JLabel activeCourgetesAmount;
     JLabel activeCourgetesAdminAmount;
 
-    public TPatcherWindow() {
+    public PatcherWindow() {
         windowName = "PSHE patcher";
         authWindow = new AuthWindow();
 
