@@ -105,7 +105,7 @@ public class TPatcherWindow extends JFrame {
         setupEvents();
     }
 
-    private void setupUi() {
+    private void setupUi() {        
         setupMainTabUi();
         setupHistoryTabUi();
         setupAdminTabUi();
