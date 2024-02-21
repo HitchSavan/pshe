@@ -27,6 +27,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -50,6 +51,7 @@ public class PatcherWindow extends Application {
     Tab adminTabEmpty;
     Tab adminTab;
     HashMap<String, Integer> tabsNames = new HashMap<>();
+    VBox adminTabContent;
 
     Label patchPathLabel;
     TextField patchPathField;
@@ -337,13 +339,13 @@ public class PatcherWindow extends Application {
 
         activeCourgetesAdminAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
-        VBox tabContent = new VBox();
-        tabContent.setAlignment(Pos.CENTER);
-        tabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
+        adminTabContent = new VBox();
+        adminTabContent.setAlignment(Pos.CENTER);
+        adminTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
                 patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesAdminAmount);
 
         adminTab = new Tab();
-        adminTab.setContent(tabContent);
+        adminTab.setContent(adminTabContent);
     }
 
     private void setupEvents() {
@@ -481,12 +483,38 @@ public class PatcherWindow extends Application {
         //     }
         // });
         loginButton.setOnAction(e -> {
-            authWindow.setVisible(!authWindow.isVisible());
+            if (authWindow.isShowing())
+                authWindow.hide();
+            else
+                authWindow.show();
         });
 
         authWindow.btnConnect.setOnAction(e -> {
+            
+            authWindow.userLogin = authWindow.loginField.getText();
+            authWindow.userPassword = authWindow.passField.getText();
+
+            if (!authWindow.config.has("userInfo")) {
+                authWindow.config.put("userInfo", new JSONObject());
+            }
+            authWindow.config.getJSONObject("userInfo").put("login", authWindow.userLogin);
+            authWindow.config.getJSONObject("userInfo").put("pass", authWindow.userPassword);
+
+            try {
+                FileOutputStream jsonOutputStream;
+                jsonOutputStream = new FileOutputStream("config.json");
+                jsonOutputStream.write(authWindow.config.toString(4).getBytes());
+                jsonOutputStream.close();
+            } catch (JSONException | IOException e1) {
+                e1.printStackTrace();
+            }
+
+            authWindow.curAccess = AuthWindow.ACCESS.ADMIN;
+            
+            authWindow.hide();
+            
             if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
-                tabsWindow.setComponentAt(tabsNames.get("Admin"), adminTab);
+                tabsWindow.getTabs().get(tabsNames.get("Admin")).setContent(adminTabContent);
             }
         });
     }
