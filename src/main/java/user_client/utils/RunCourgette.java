@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import javax.swing.JLabel;
+import javafx.scene.control.Label;
 
 public class RunCourgette extends Thread {
 
@@ -17,7 +17,7 @@ public class RunCourgette extends Thread {
 
     String[] courgetteArgs = null;
     boolean replaceFiles;
-    JLabel updatingComponent;
+    Label updatingComponent;
 
     public static void unpackCourgette() {
         String os = System.getProperty("os.name").toLowerCase();
@@ -69,7 +69,7 @@ public class RunCourgette extends Thread {
         return courgette;
     }
     
-    public void run(String[] args, boolean _replaceFiles, JLabel _updatingComponent) {
+    public void run(String[] args, boolean _replaceFiles, Label _updatingComponent) {
         courgetteArgs = args;
         replaceFiles = _replaceFiles;
         updatingComponent = _updatingComponent;

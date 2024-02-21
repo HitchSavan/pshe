@@ -1,27 +1,22 @@
 package user_client.gui;
 
-import java.awt.Button;
-import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import javax.swing.BoxLayout;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class AuthWindow extends JFrame {
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+public class AuthWindow extends Stage {
 
     public enum ACCESS {
         ADMIN,
@@ -37,13 +32,13 @@ public class AuthWindow extends JFrame {
     String userLogin = "";
     String userPassword = "";
 
-    JPanel startPanel;
+    VBox startPanel;
 
-    JLabel loginLabel;
-    JTextField loginField;
+    Label loginLabel;
+    TextField loginField;
 
-    JLabel passLabel;
-    JTextField passField;
+    Label passLabel;
+    TextField passField;
     
     Button btnConnect;
     

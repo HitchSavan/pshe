@@ -12,16 +12,20 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.swing.JFileChooser;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -67,7 +71,7 @@ public class PatcherWindow extends Application {
     TextField newProjectPathField;
     Button chooseNewProjectButton;
 
-    FileChooser fileChooser;
+    JFileChooser fileChooser;
 
     CheckBox rememberPathsCheckbox;
     CheckBox replaceFilesCheckbox;
@@ -107,12 +111,12 @@ public class PatcherWindow extends Application {
     private void setupUi() {        
         setupMainTabUi();
         // setupHistoryTabUi();
-        // setupAdminTabUi();
+        setupAdminTabUi();
         
         tabsWindow = new TabPane();
         addTab(tabsWindow, "Patching", mainTab);
         // addTab(tabsWindow, "History", historyTab);
-        // addTab(tabsWindow, "Admin", adminTabEmpty);
+        addTab(tabsWindow, "Admin", adminTabEmpty);
 
         this.primaryStage.setMinWidth(300);
         this.primaryStage.setMinHeight(210);
@@ -127,6 +131,8 @@ public class PatcherWindow extends Application {
     }
 
     private void addTab(TabPane tabbedPane, String tabName, Tab newTab) {
+        newTab.setText(tabName);
+        newTab.setClosable(false);
         tabbedPane.getTabs().add(newTab);
         tabsNames.put(tabName, tabbedPane.getTabs().size()-1);
     }
@@ -157,56 +163,54 @@ public class PatcherWindow extends Application {
         }
 
         projectPathLabel = new Label("Path to project:");
-        // projectPathLabel.setPreferredSize(new Dimension(90, 0));
+        projectPathLabel.setPrefSize(90, 25);
         projectPathField = new TextField(projectPath.toString());
-        // projectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         projectPathField.setEditable(true);
         chooseProjectButton = new Button("browse");
-        // chooseProjectButton.setMaximumSize(new Dimension(0, 20));
-        HBox projectPathPanel = new HBox();
-        // projectPathPanel.setLayout(new BoxLayout(projectPathPanel, BoxLayout.X_AXIS));
+        chooseProjectButton.setPrefSize(60, 0);
+
+        AnchorPane projectPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(projectPathLabel, 5d);
+        AnchorPane.setLeftAnchor(projectPathField, 5d + projectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(projectPathField, 5d + chooseProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseProjectButton, 5d);
         projectPathPanel.getChildren().addAll(projectPathLabel, projectPathField, chooseProjectButton);
-        // projectPathPanel.add(Box.createHorizontalGlue());
-        projectPathPanel.setPadding(new Insets(5));
 
         patchPathLabel = new Label("Path to patch:");
-        // patchPathLabel.setPreferredSize(new Dimension(90, 0));
+        patchPathLabel.setPrefSize(90, 25);
         patchPathField = new TextField(patchPath.toString());
-        // patchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         patchPathField.setEditable(true);
         choosePatchButton = new Button("browse");
-        // choosePatchButton.setMaximumSize(new Dimension(0, 20));
-        HBox patchPathPanel = new HBox();
-        // patchPathPanel.setLayout(new BoxLayout(patchPathPanel, BoxLayout.X_AXIS));
+        choosePatchButton.setPrefSize(60, 0);
+
+        AnchorPane patchPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(patchPathLabel, 5d);
+        AnchorPane.setLeftAnchor(patchPathField, 5d + patchPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(patchPathField, 5d + choosePatchButton.getPrefWidth());
+        AnchorPane.setRightAnchor(choosePatchButton, 5d);
         patchPathPanel.getChildren().addAll(patchPathLabel, patchPathField, choosePatchButton);
-        // patchPathPanel.add(Box.createHorizontalGlue());
-        patchPathPanel.setPadding(new Insets(5));
 
         rememberPathsCheckbox = new CheckBox("Remember");
         rememberPathsCheckbox.setSelected(rememberPaths);
         replaceFilesCheckbox = new CheckBox("Replace old files");
         replaceFilesCheckbox.setSelected(replaceFiles);
 
+        VBox checkboxPanel = new VBox();
+        checkboxPanel.setPadding(new Insets(5));
+        checkboxPanel.getChildren().addAll(rememberPathsCheckbox, replaceFilesCheckbox);
+
         applyPatchButton = new Button("Patch");
-        // applyPatchButton.setMaximumSize(new Dimension(50, 20));
+        applyPatchButton.setPrefSize(50, 0);
 
         activeCourgetesAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
-        // activeCourgetesAmount.setAlignmentX(JFrame.CENTER_ALIGNMENT);
 
         VBox tabContent = new VBox();
-        tabContent.getChildren().addAll(projectPathPanel, patchPathPanel, rememberPathsCheckbox, replaceFilesCheckbox, applyPatchButton, activeCourgetesAmount);
+        tabContent.setAlignment(Pos.CENTER);
+        tabContent.getChildren().addAll(projectPathPanel, patchPathPanel,
+                checkboxPanel, applyPatchButton, activeCourgetesAmount);
 
         mainTab = new Tab();
         mainTab.setContent(tabContent);
-        // mainTab.setLayout(new BoxLayout(mainTab, BoxLayout.Y_AXIS));
-        // mainTab.add(projectPathPanel);
-        // mainTab.add(Box.createRigidArea(new Dimension(5, 5)));
-        // mainTab.add(patchPathPanel);
-        // mainTab.add(Box.createVerticalGlue());
-        // mainTab.add(rememberPathsCheckbox);
-        // mainTab.add(replaceFilesCheckbox);
-        // mainTab.add(applyPatchButton);
-        // mainTab.add(activeCourgetesAmount);
     }
 
     // private void setupHistoryTabUi() {
@@ -268,133 +272,100 @@ public class PatcherWindow extends Application {
     //     historyTab.add(new JScrollPane(table));
     // }
 
-    // private void setupAdminTabUi() {
-    //     adminTabEmpty = new JPanel();
-    //     adminTabEmpty.setLayout(new BoxLayout(adminTabEmpty, BoxLayout.X_AXIS));
-    //     JPanel loginpanel = new JPanel();
-    //     loginpanel.setLayout(new BoxLayout(loginpanel, BoxLayout.Y_AXIS));
+    private void setupAdminTabUi() {
+        VBox loginpanel = new VBox();
+        loginpanel.setAlignment(Pos.CENTER);
 
-    //     loginMessage = new JLabel("You are not logged in");
-    //     loginMessage.setPreferredSize(new Dimension(150, 0));
-    //     loginMessage.setAlignmentX(JFrame.CENTER_ALIGNMENT);
+        loginMessage = new Label("You are not logged in");
+        loginButton = new Button("Login");
 
-    //     loginButton = new Button("Login");
-    //     loginButton.setMaximumSize(new Dimension(50, 20));
+        loginpanel.getChildren().addAll(loginMessage, loginButton);
 
-    //     loginpanel.add(Box.createRigidArea(new Dimension(20, 20)));
-    //     loginpanel.add(loginMessage);
-    //     loginpanel.add(Box.createRigidArea(new Dimension(20, 20)));
-    //     loginpanel.add(loginButton);
+        adminTabEmpty = new Tab();
+        adminTabEmpty.setContent(loginpanel);
 
-    //     adminTabEmpty.add(Box.createHorizontalGlue());
-    //     adminTabEmpty.add(loginpanel);
-    //     adminTabEmpty.add(Box.createHorizontalGlue());
+        oldProjectPathLabel = new Label("Path to old version:");
+        oldProjectPathLabel.setPrefSize(120, 25);
+        oldProjectPathField = new TextField(oldProjectPath.toString());
+        oldProjectPathField.setEditable(true);
+        chooseOldProjectButton = new Button("browse");
+        chooseOldProjectButton.setPrefSize(60, 0);
 
-    //     oldProjectPathLabel = new JLabel("Path to old version:");
-    //     oldProjectPathLabel.setPreferredSize(new Dimension(120, 0));
-    //     oldProjectPathField = new JTextField(oldProjectPath.toString());
-    //     oldProjectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
-    //     oldProjectPathField.setEditable(true);
-    //     chooseOldProjectButton = new Button("browse");
-    //     chooseOldProjectButton.setMaximumSize(new Dimension(0, 20));
-    //     JPanel oldProjectPathPanel = new JPanel();
-    //     oldProjectPathPanel.setLayout(new BoxLayout(oldProjectPathPanel, BoxLayout.X_AXIS));
-    //     oldProjectPathPanel.add(oldProjectPathLabel);
-    //     oldProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     oldProjectPathPanel.add(oldProjectPathField);
-    //     oldProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     oldProjectPathPanel.add(chooseOldProjectButton);
-    //     oldProjectPathPanel.add(Box.createHorizontalGlue());
+        AnchorPane oldProjectPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(oldProjectPathLabel, 5d);
+        AnchorPane.setLeftAnchor(oldProjectPathField, 5d + oldProjectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(oldProjectPathField, 5d + chooseOldProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseOldProjectButton, 5d);
+        oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
 
-    //     newProjectPathLabel = new JLabel("Path to new version:");
-    //     newProjectPathLabel.setPreferredSize(new Dimension(120, 0));
-    //     newProjectPathField = new JTextField(newProjectPath.toString());
-    //     newProjectPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
-    //     newProjectPathField.setEditable(true);
-    //     chooseNewProjectButton = new Button("browse");
-    //     chooseNewProjectButton.setMaximumSize(new Dimension(0, 20));
-    //     JPanel newProjectPathPanel = new JPanel();
-    //     newProjectPathPanel.setLayout(new BoxLayout(newProjectPathPanel, BoxLayout.X_AXIS));
-    //     newProjectPathPanel.add(newProjectPathLabel);
-    //     newProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     newProjectPathPanel.add(newProjectPathField);
-    //     newProjectPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     newProjectPathPanel.add(chooseNewProjectButton);
-    //     newProjectPathPanel.add(Box.createHorizontalGlue());
+        newProjectPathLabel = new Label("Path to new version:");
+        newProjectPathLabel.setPrefSize(120, 25);
+        newProjectPathField = new TextField(newProjectPath.toString());
+        newProjectPathField.setEditable(true);
+        chooseNewProjectButton = new Button("browse");
+        chooseNewProjectButton.setPrefSize(60, 0);
 
-    //     adminPatchPathLabel = new JLabel("Path to patch folder:");
-    //     adminPatchPathLabel.setPreferredSize(new Dimension(120, 0));
-    //     adminPatchPathField = new JTextField(patchFolderPath.toString());
-    //     adminPatchPathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
-    //     adminPatchPathField.setEditable(true);
-    //     adminChoosePatchButton = new Button("browse");
-    //     adminChoosePatchButton.setMaximumSize(new Dimension(0, 20));
-    //     JPanel patchPathPanel = new JPanel();
-    //     patchPathPanel.setLayout(new BoxLayout(patchPathPanel, BoxLayout.X_AXIS));
-    //     patchPathPanel.add(adminPatchPathLabel);
-    //     patchPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     patchPathPanel.add(adminPatchPathField);
-    //     patchPathPanel.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     patchPathPanel.add(adminChoosePatchButton);
-    //     patchPathPanel.add(Box.createHorizontalGlue());
+        AnchorPane newProjectPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(newProjectPathLabel, 5d);
+        AnchorPane.setLeftAnchor(newProjectPathField, 5d + newProjectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(newProjectPathField, 5d + chooseNewProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseNewProjectButton, 5d);
+        newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
 
-    //     rememberPathsCheckbox = new Checkbox("Remember",
-    //             authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths"));
+        adminPatchPathLabel = new Label("Path to patch folder:");
+        adminPatchPathLabel.setPrefSize(120, 25);
+        adminPatchPathField = new TextField(patchFolderPath.toString());
+        adminPatchPathField.setEditable(true);
+        adminChoosePatchButton = new Button("browse");
+        adminChoosePatchButton.setPrefSize(60, 0);
 
-    //     createPatchButton = new Button("Create patch");
-    //     createPatchButton.setMaximumSize(new Dimension(100, 20));
+        AnchorPane patchPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(adminPatchPathLabel, 5d);
+        AnchorPane.setLeftAnchor(adminPatchPathField, 5d + adminPatchPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(adminPatchPathField, 5d + adminChoosePatchButton.getPrefWidth());
+        AnchorPane.setRightAnchor(adminChoosePatchButton, 5d);
+        patchPathPanel.getChildren().addAll(adminPatchPathLabel, adminPatchPathField, adminChoosePatchButton);
 
-    //     activeCourgetesAdminAmount = new JLabel("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
-    //     activeCourgetesAdminAmount.setAlignmentX(JFrame.CENTER_ALIGNMENT);
+        rememberPathsCheckbox = new CheckBox("Remember");
+        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths"));
 
-    //     adminTab = new JPanel();
-    //     adminTab.setLayout(new BoxLayout(adminTab, BoxLayout.Y_AXIS));
-    //     adminTab.add(oldProjectPathPanel);
-    //     adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     adminTab.add(newProjectPathPanel);
-    //     adminTab.add(Box.createRigidArea(new Dimension(5, 5)));
-    //     adminTab.add(patchPathPanel);
-    //     adminTab.add(Box.createVerticalGlue());
-    //     adminTab.add(rememberPathsCheckbox);
-    //     adminTab.add(createPatchButton);
-    //     adminTab.add(activeCourgetesAdminAmount);
-    // }
+        VBox checkboxPanel = new VBox();
+        checkboxPanel.getChildren().addAll(rememberPathsCheckbox);
+
+        createPatchButton = new Button("Create patch");
+        createPatchButton.setPrefSize(100, 0);
+
+        activeCourgetesAdminAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+
+        VBox tabContent = new VBox();
+        tabContent.setAlignment(Pos.CENTER);
+        tabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
+                patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesAdminAmount);
+
+        adminTab = new Tab();
+        adminTab.setContent(tabContent);
+    }
 
     private void setupEvents() {
         this.primaryStage.setOnCloseRequest(e -> {
-                UnpackResources.deleteDirectory("tmp");
-                System.exit(0);
+            UnpackResources.deleteDirectory("tmp");
+            System.exit(0);
         });
-        // choosePatchButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
-        //     }
-        // });
-        // adminChoosePatchButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY);
-        //     }
-        // });
-        // chooseProjectButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
-        //     }
-        // });
-        // chooseNewProjectButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
-        //     }
-        // });
-        // chooseOldProjectButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
-        //     }
-        // });
+        choosePatchButton.setOnAction(e -> {
+            choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
+        adminChoosePatchButton.setOnAction(e -> {
+            choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY);
+        });
+        chooseProjectButton.setOnAction(e -> {
+            choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
+        chooseNewProjectButton.setOnAction(e -> {
+            choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
+        chooseOldProjectButton.setOnAction(e -> {
+            choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
         // applyPatchButton.addActionListener(new ActionListener() {
         //     @Override
         //     public void actionPerformed(ActionEvent e) {
@@ -509,21 +480,15 @@ public class PatcherWindow extends Application {
         //         generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesAdminAmount);
         //     }
         // });
-        // loginButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         authWindow.setVisible(!authWindow.isVisible());
-        //     }
-        // });
+        loginButton.setOnAction(e -> {
+            authWindow.setVisible(!authWindow.isVisible());
+        });
 
-        // authWindow.btnConnect.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
-        //             tabsWindow.setComponentAt(tabsNames.get("Admin"), adminTab);
-        //         }
-        //     }
-        // });
+        authWindow.btnConnect.setOnAction(e -> {
+            if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
+                tabsWindow.setComponentAt(tabsNames.get("Admin"), adminTab);
+            }
+        });
     }
 
     // private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles,
@@ -575,20 +540,20 @@ public class PatcherWindow extends Application {
     //     }
     // }
 
-    // private void choosePath(JTextField field, int mode) {
-    //     choosePath(field, mode, Paths.get(field.getText()));
-    // }
+    private void choosePath(TextField field, int mode) {
+        choosePath(field, mode, Paths.get(field.getText()));
+    }
 
-    // private void choosePath(JTextField field, int mode, Path defaultPath) {
-    //     fileChooser = new JFileChooser();
-    //     if (defaultPath.getParent() != null) {
-    //         fileChooser.setCurrentDirectory(defaultPath.getParent().toFile());
-    //     }
-    //     fileChooser.setFileSelectionMode(mode);
-    //     int option = fileChooser.showOpenDialog(adminTab);
-    //     if(option == JFileChooser.APPROVE_OPTION){
-    //        File file = fileChooser.getSelectedFile();
-    //        field.setText(file.getAbsolutePath());
-    //     }
-    // }
+    private void choosePath(TextField field, int mode, Path defaultPath) {
+        fileChooser = new JFileChooser();
+        if (defaultPath.getParent() != null) {
+            fileChooser.setCurrentDirectory(defaultPath.getParent().toFile());
+        }
+        fileChooser.setFileSelectionMode(mode);
+        int option = fileChooser.showOpenDialog(null);
+        if(option == JFileChooser.APPROVE_OPTION){
+           File file = fileChooser.getSelectedFile();
+           field.setText(file.getAbsolutePath());
+        }
+    }
 }
