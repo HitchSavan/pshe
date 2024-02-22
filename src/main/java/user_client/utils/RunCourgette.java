@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import javax.swing.JLabel;
+import javafx.application.Platform;
+import javafx.scene.control.Label;
 
 public class RunCourgette extends Thread {
 
@@ -17,7 +18,7 @@ public class RunCourgette extends Thread {
 
     String[] courgetteArgs = null;
     boolean replaceFiles;
-    JLabel updatingComponent;
+    Label updatingComponent;
 
     public static void unpackCourgette() {
         String os = System.getProperty("os.name").toLowerCase();
@@ -50,12 +51,14 @@ public class RunCourgette extends Thread {
         }
 
         while (currentThreadsAmount >= MAX_THREADS_AMOUNT) {
-            sleep(100);
+            sleep(10000);
         }
 
         ++currentThreadsAmount;
         if (updatingComponent != null)
-            updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            Platform.runLater(() -> {
+                updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            });
         courgette.waitFor();
 
         if (replaceFiles) {
@@ -65,11 +68,13 @@ public class RunCourgette extends Thread {
         }
         --currentThreadsAmount;
         if (updatingComponent != null)
-            updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            Platform.runLater(() -> {
+                updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            });
         return courgette;
     }
     
-    public void run(String[] args, boolean _replaceFiles, JLabel _updatingComponent) {
+    public void run(String[] args, boolean _replaceFiles, Label _updatingComponent) {
         courgetteArgs = args;
         replaceFiles = _replaceFiles;
         updatingComponent = _updatingComponent;

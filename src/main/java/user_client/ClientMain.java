@@ -7,6 +7,6 @@ import user_client.utils.RunCourgette;
 public class ClientMain {
     public static void main(String[] args) throws IOException {
         RunCourgette.unpackCourgette();
-        new PatcherWindow();
+        PatcherWindow.main(args);
     }
 }
