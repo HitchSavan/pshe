@@ -26,12 +26,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import user_client.utils.FileVisitor;
 import user_client.utils.Patcher;
@@ -110,7 +105,7 @@ public class PatcherWindow extends Application {
         setupEvents();
     }
 
-    private void setupUi() {        
+    private void setupUi() {
         setupMainTabUi();
         // setupHistoryTabUi();
         setupAdminTabUi();
@@ -121,10 +116,10 @@ public class PatcherWindow extends Application {
         addTab(tabsWindow, "Admin", adminTabEmpty);
 
         this.primaryStage.setMinWidth(300);
-        this.primaryStage.setMinHeight(210);
+        this.primaryStage.setMinHeight(220);
+        this.primaryStage.setMaxHeight(220);
 
         this.primaryStage.setWidth(600);
-        this.primaryStage.setHeight(210);
         this.primaryStage.setTitle(windowName);
 
         primaryScene = new Scene(tabsWindow);
@@ -207,7 +202,8 @@ public class PatcherWindow extends Application {
         activeCourgetesAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
         VBox tabContent = new VBox();
-        tabContent.setAlignment(Pos.CENTER);
+        tabContent.setAlignment(Pos.TOP_CENTER);
+        tabContent.setPadding(new Insets(5));
         tabContent.getChildren().addAll(projectPathPanel, patchPathPanel,
                 checkboxPanel, applyPatchButton, activeCourgetesAmount);
 
@@ -332,6 +328,7 @@ public class PatcherWindow extends Application {
         rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths"));
 
         VBox checkboxPanel = new VBox();
+        checkboxPanel.setPadding(new Insets(5));
         checkboxPanel.getChildren().addAll(rememberPathsCheckbox);
 
         createPatchButton = new Button("Create patch");
@@ -340,7 +337,8 @@ public class PatcherWindow extends Application {
         activeCourgetesAdminAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
         adminTabContent = new VBox();
-        adminTabContent.setAlignment(Pos.CENTER);
+        adminTabContent.setAlignment(Pos.TOP_CENTER);
+        adminTabContent.setPadding(new Insets(5));
         adminTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
                 patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesAdminAmount);
 
@@ -368,120 +366,114 @@ public class PatcherWindow extends Application {
         chooseOldProjectButton.setOnAction(e -> {
             choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
-        // applyPatchButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         projectPath = Paths.get(projectPathField.getText());
-        //         patchPath = Paths.get(patchPathField.getText());
-        //         Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
+        applyPatchButton.setOnAction(e -> {
+            projectPath = Paths.get(projectPathField.getText());
+            patchPath = Paths.get(patchPathField.getText());
+            Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
 
-        //         if (!authWindow.config.has("patchingInfo")) {
-        //             authWindow.config.put("patchingInfo", new JSONObject());
-        //         }
-        //         authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
-        //         authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
-        //         authWindow.config.getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.getState());
-        //         authWindow.config.getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.getState());
+            if (!authWindow.config.has("patchingInfo")) {
+                authWindow.config.put("patchingInfo", new JSONObject());
+            }
+            authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
+            authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
+            authWindow.config.getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
+            authWindow.config.getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.isSelected());
 
-        //         try {
-        //             FileOutputStream jsonOutputStream;
-        //             jsonOutputStream = new FileOutputStream("config.json");
-        //             jsonOutputStream.write(authWindow.config.toString(4).getBytes());
-        //             jsonOutputStream.close();
-        //         } catch (JSONException | IOException e1) {
-        //             e1.printStackTrace();
-        //         }
+            try {
+                FileOutputStream jsonOutputStream;
+                jsonOutputStream = new FileOutputStream("config.json");
+                jsonOutputStream.write(authWindow.config.toString(4).getBytes());
+                jsonOutputStream.close();
+            } catch (JSONException | IOException e1) {
+                e1.printStackTrace();
+            }
 
-        //         FileVisitor fileVisitor = new FileVisitor();
+            FileVisitor fileVisitor = new FileVisitor();
 
-        //         ArrayList<Path> oldFiles = new ArrayList<>();
-        //         ArrayList<Path> patchFiles = new ArrayList<>();
+            ArrayList<Path> oldFiles = new ArrayList<>();
+            ArrayList<Path> patchFiles = new ArrayList<>();
 
-        //         try {
-        //             Files.walkFileTree(projectPath, fileVisitor);
-        //             oldFiles = new ArrayList<>(fileVisitor.allFiles);
-        //             fileVisitor.allFiles.clear();
+            try {
+                Files.walkFileTree(projectPath, fileVisitor);
+                oldFiles = new ArrayList<>(fileVisitor.allFiles);
+                fileVisitor.allFiles.clear();
 
-        //             Files.walkFileTree(patchPath, fileVisitor);
-        //             patchFiles = new ArrayList<>(fileVisitor.allFiles);
-        //             fileVisitor.allFiles.clear();
-        //         } catch (IOException e1) {
-        //             e1.printStackTrace();
-        //         }
+                Files.walkFileTree(patchPath, fileVisitor);
+                patchFiles = new ArrayList<>(fileVisitor.allFiles);
+                fileVisitor.allFiles.clear();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
 
-        //         Path relativePatchPath;
-        //         Path newPath;
-        //         Path oldPath;
-        //         byte[] emptyData = {0};
-        
-        //         for (Path patchFile: patchFiles) {
-        
-        //             relativePatchPath = patchPath.relativize(patchFile);
-        //             newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
-        //                     Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
-        //                             tmpProjectPath.getFileName().toString()).toString() :
-        //                     relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
-        //             oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
-        //                     relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+            Path relativePatchPath;
+            Path newPath;
+            Path oldPath;
+            byte[] emptyData = {0};
+    
+            for (Path patchFile: patchFiles) {
+    
+                relativePatchPath = patchPath.relativize(patchFile);
+                newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
+                        Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
+                                tmpProjectPath.getFileName().toString()).toString() :
+                        relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+                oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
+                        relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
 
-        //             if (!oldFiles.contains(oldPath)) {
-        //                 try {
-        //                     Files.createFile(oldPath);
-        //                     Files.write(oldPath, emptyData);
-        //                 } catch (IOException e1) {
-        //                     e1.printStackTrace();
-        //                 }
-        //             }
-        
-        //             try {
-        //                 Files.createDirectories(newPath.getParent());
-        //             } catch (IOException e1) {
-        //                 e1.printStackTrace();
-        //             }
-        
-        //             Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.getState(), activeCourgetesAmount);
-        //         }
-        //     }
-        // });
-        // createPatchButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         oldProjectPath = Paths.get(oldProjectPathField.getText());
-        //         newProjectPath = Paths.get(newProjectPathField.getText());
-        //         patchFolderPath = Paths.get(adminPatchPathField.getText());
+                if (!oldFiles.contains(oldPath)) {
+                    try {
+                        Files.createFile(oldPath);
+                        Files.write(oldPath, emptyData);
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+    
+                try {
+                    Files.createDirectories(newPath.getParent());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+    
+                Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesAmount);
+            }
+        });
+        createPatchButton.setOnAction(e -> {
+            oldProjectPath = Paths.get(oldProjectPathField.getText());
+            newProjectPath = Paths.get(newProjectPathField.getText());
+            patchFolderPath = Paths.get(adminPatchPathField.getText());
 
-        //         if (!authWindow.config.has("patchCreationInfo")) {
-        //             authWindow.config.put("patchCreationInfo", new JSONObject());
-        //         }
-        //         authWindow.config.getJSONObject("patchCreationInfo").put("patchPath", patchFolderPath.toString());
-        //         authWindow.config.getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
-        //         authWindow.config.getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
-        //         authWindow.config.getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.getState());
+            if (!authWindow.config.has("patchCreationInfo")) {
+                authWindow.config.put("patchCreationInfo", new JSONObject());
+            }
+            authWindow.config.getJSONObject("patchCreationInfo").put("patchPath", patchFolderPath.toString());
+            authWindow.config.getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
+            authWindow.config.getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
+            authWindow.config.getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
 
-        //         try {
-        //             FileOutputStream jsonOutputStream;
-        //             jsonOutputStream = new FileOutputStream("config.json");
-        //             jsonOutputStream.write(authWindow.config.toString(4).getBytes());
-        //             jsonOutputStream.close();
-        //         } catch (JSONException | IOException e1) {
-        //             e1.printStackTrace();
-        //         }
+            try {
+                FileOutputStream jsonOutputStream;
+                jsonOutputStream = new FileOutputStream("config.json");
+                jsonOutputStream.write(authWindow.config.toString(4).getBytes());
+                jsonOutputStream.close();
+            } catch (JSONException | IOException e1) {
+                e1.printStackTrace();
+            }
 
-        //         FileVisitor fileVisitor = new FileVisitor(newProjectPath);
+            FileVisitor fileVisitor = new FileVisitor(newProjectPath);
 
-        //         ArrayList<Path> oldFiles = new ArrayList<>();
-        //         ArrayList<Path> newFiles = new ArrayList<>();
+            ArrayList<Path> oldFiles = new ArrayList<>();
+            ArrayList<Path> newFiles = new ArrayList<>();
 
-        //         fileVisitor.walkFileTree(oldProjectPath);
-        //         oldFiles = new ArrayList<>(fileVisitor.allFiles);
+            fileVisitor.walkFileTree(oldProjectPath);
+            oldFiles = new ArrayList<>(fileVisitor.allFiles);
 
-        //         fileVisitor.walkFileTree(newProjectPath);
-        //         newFiles = new ArrayList<>(fileVisitor.allFiles);
-                
-        //         generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesAdminAmount);
-        //         generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesAdminAmount);
-        //     }
-        // });
+            fileVisitor.walkFileTree(newProjectPath);
+            newFiles = new ArrayList<>(fileVisitor.allFiles);
+            
+            generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesAdminAmount);
+            generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesAdminAmount);
+        });
         loginButton.setOnAction(e -> {
             if (authWindow.isShowing())
                 authWindow.hide();
@@ -519,54 +511,54 @@ public class PatcherWindow extends Application {
         });
     }
 
-    // private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles,
-    //         ArrayList<Path> newFiles, String patchSubfolder, JLabel updatingComponent) {
-    //     Path relativeOldPath;
-    //     Path newPath;
-    //     Path patchFile;
-    //     byte[] emptyData = {0};
+    private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles,
+            ArrayList<Path> newFiles, String patchSubfolder, Label updatingComponent) {
+        Path relativeOldPath;
+        Path newPath;
+        Path patchFile;
+        byte[] emptyData = {0};
 
-    //     for (Path oldFile: oldFiles) {
+        for (Path oldFile: oldFiles) {
 
-    //         relativeOldPath = oldProjectPath.relativize(oldFile);
-    //         newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
-    //         patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder,
-    //                 (relativeOldPath.toString().equals("") ? oldFile.getFileName() : relativeOldPath.toString()) + "_patch").normalize();
+            relativeOldPath = oldProjectPath.relativize(oldFile);
+            newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
+            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder,
+                    (relativeOldPath.toString().equals("") ? oldFile.getFileName() : relativeOldPath.toString()) + "_patch").normalize();
 
-    //         if (oldFile.toFile().length() <= 1 || newPath.toFile().length() <= 1) {
-    //             continue;
-    //         }
+            if (oldFile.toFile().length() <= 1 || newPath.toFile().length() <= 1) {
+                continue;
+            }
 
-    //         try {
-    //             Files.createDirectories(patchFile.getParent());
-    //         } catch (IOException e1) {
-    //             e1.printStackTrace();
-    //         }
+            try {
+                Files.createDirectories(patchFile.getParent());
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
 
-    //         Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
-    //     }
+            Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
+        }
 
-    //     Path relativeNewPath;
-    //     Path oldPath;
-    //     for (Path newFile: newFiles) {
+        Path relativeNewPath;
+        Path oldPath;
+        for (Path newFile: newFiles) {
             
-    //         relativeNewPath = newProjectPath.relativize(newFile);
-    //         oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
-    //         patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeNewPath.toString() + "_patch").normalize();
+            relativeNewPath = newProjectPath.relativize(newFile);
+            oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
+            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeNewPath.toString() + "_patch").normalize();
 
-    //         if (!oldFiles.contains(oldPath)) {
-    //             try {
-    //                 Files.createFile(oldPath);
-    //                 Files.write(oldPath, emptyData);
-    //                 Files.createDirectories(patchFile.getParent());
-    //             } catch (IOException e1) {
-    //                 e1.printStackTrace();
-    //             }
+            if (!oldFiles.contains(oldPath)) {
+                try {
+                    Files.createFile(oldPath);
+                    Files.write(oldPath, emptyData);
+                    Files.createDirectories(patchFile.getParent());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
 
-    //             Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
-    //         }
-    //     }
-    // }
+                Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
+            }
+        }
+    }
 
     private void choosePath(TextField field, int mode) {
         choosePath(field, mode, Paths.get(field.getText()));

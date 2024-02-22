@@ -9,6 +9,8 @@ import java.nio.file.Paths;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -111,13 +113,14 @@ public class AuthWindow extends Stage {
         btnConnect.setPrefSize(65, 25);
 
         VBox startPanel = new VBox();
+        startPanel.setAlignment(Pos.BOTTOM_CENTER);
         startPanel.getChildren().addAll(btnConnect);
 
         VBox fieldsPanel = new VBox();
         fieldsPanel.getChildren().addAll(loginPanel, passPanel);
 
         BorderPane primaryPane = new BorderPane();
-
+        primaryPane.setPadding(new Insets(5));
         primaryPane.setTop(fieldsPanel);
         primaryPane.setBottom(startPanel);
 
@@ -126,6 +129,7 @@ public class AuthWindow extends Stage {
         this.setScene(primaryScene);
         this.setMinWidth(200);
         this.setMinHeight(150);
+        this.setResizable(false);
         this.setTitle("client");
         this.setTitle(windowName);
     }

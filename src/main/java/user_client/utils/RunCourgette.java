@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import javafx.application.Platform;
 import javafx.scene.control.Label;
 
 public class RunCourgette extends Thread {
@@ -50,12 +51,14 @@ public class RunCourgette extends Thread {
         }
 
         while (currentThreadsAmount >= MAX_THREADS_AMOUNT) {
-            sleep(100);
+            sleep(10000);
         }
 
         ++currentThreadsAmount;
         if (updatingComponent != null)
-            updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            Platform.runLater(() -> {
+                updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            });
         courgette.waitFor();
 
         if (replaceFiles) {
@@ -65,7 +68,9 @@ public class RunCourgette extends Thread {
         }
         --currentThreadsAmount;
         if (updatingComponent != null)
-            updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            Platform.runLater(() -> {
+                updatingComponent.setText("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+            });
         return courgette;
     }
     
