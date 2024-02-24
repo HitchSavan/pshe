@@ -4,7 +4,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,7 +13,6 @@ import java.util.HashMap;
 
 import javax.swing.JFileChooser;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import javafx.application.Application;
@@ -116,8 +114,8 @@ public class PatcherWindow extends Application {
         addTab(tabsWindow, "Admin", adminTabEmpty);
 
         this.primaryStage.setMinWidth(300);
-        this.primaryStage.setMinHeight(220);
-        this.primaryStage.setMaxHeight(220);
+        this.primaryStage.setMinHeight(230);
+        this.primaryStage.setMaxHeight(230);
 
         this.primaryStage.setWidth(600);
         this.primaryStage.setTitle(windowName);
@@ -135,36 +133,31 @@ public class PatcherWindow extends Application {
     }
 
     private void setupMainTabUi() {
-        String configFilename = "config.json";
-        authWindow.config = new JSONObject();
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
-        if (Files.exists(Paths.get(configFilename))) {
-            File file = new File(configFilename);
-            String content;
-            try {
-                content = new String(Files.readAllBytes(Paths.get(file.toURI())));
-                authWindow.config = new JSONObject(content);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            projectPath = Paths.get(authWindow.config.getJSONObject("patchingInfo").getString("projectPath"));
-            patchPath = Paths.get(authWindow.config.getJSONObject("patchingInfo").getString("patchPath"));
-            rememberPaths = authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths");
-            replaceFiles = authWindow.config.getJSONObject("patchingInfo").getBoolean("replaceFiles");
+        projectPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchingInfo").getString("projectPath"));
+        patchPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchingInfo").getString("patchPath"));
+        rememberPaths = authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchingInfo").getBoolean("rememberPaths");
+        replaceFiles = authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchingInfo").getBoolean("replaceFiles");
 
-            oldProjectPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("oldProjectPath"));
-            newProjectPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("newProjectPath"));
-            patchFolderPath = Paths.get(authWindow.config.getJSONObject("patchCreationInfo").getString("patchPath"));
-        }
+        oldProjectPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchCreationInfo").getString("oldProjectPath"));
+        newProjectPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchCreationInfo").getString("newProjectPath"));
+        patchFolderPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchCreationInfo").getString("patchPath"));
 
         projectPathLabel = new Label("Path to project:");
-        projectPathLabel.setPrefSize(90, 25);
+        projectPathLabel.setPrefSize(105, 25);
         projectPathField = new TextField(projectPath.toString());
         projectPathField.setEditable(true);
         chooseProjectButton = new Button("browse");
-        chooseProjectButton.setPrefSize(60, 0);
+        chooseProjectButton.setPrefSize(70, 0);
 
         AnchorPane projectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(projectPathLabel, 5d);
@@ -174,11 +167,11 @@ public class PatcherWindow extends Application {
         projectPathPanel.getChildren().addAll(projectPathLabel, projectPathField, chooseProjectButton);
 
         patchPathLabel = new Label("Path to patch:");
-        patchPathLabel.setPrefSize(90, 25);
+        patchPathLabel.setPrefSize(105, 25);
         patchPathField = new TextField(patchPath.toString());
         patchPathField.setEditable(true);
         choosePatchButton = new Button("browse");
-        choosePatchButton.setPrefSize(60, 0);
+        choosePatchButton.setPrefSize(70, 0);
 
         AnchorPane patchPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(patchPathLabel, 5d);
@@ -197,7 +190,7 @@ public class PatcherWindow extends Application {
         checkboxPanel.getChildren().addAll(rememberPathsCheckbox, replaceFilesCheckbox);
 
         applyPatchButton = new Button("Patch");
-        applyPatchButton.setPrefSize(50, 0);
+        applyPatchButton.setPrefSize(60, 0);
 
         activeCourgetesAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
@@ -283,11 +276,11 @@ public class PatcherWindow extends Application {
         adminTabEmpty.setContent(loginpanel);
 
         oldProjectPathLabel = new Label("Path to old version:");
-        oldProjectPathLabel.setPrefSize(120, 25);
+        oldProjectPathLabel.setPrefSize(135, 25);
         oldProjectPathField = new TextField(oldProjectPath.toString());
         oldProjectPathField.setEditable(true);
         chooseOldProjectButton = new Button("browse");
-        chooseOldProjectButton.setPrefSize(60, 0);
+        chooseOldProjectButton.setPrefSize(70, 0);
 
         AnchorPane oldProjectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(oldProjectPathLabel, 5d);
@@ -297,11 +290,11 @@ public class PatcherWindow extends Application {
         oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
 
         newProjectPathLabel = new Label("Path to new version:");
-        newProjectPathLabel.setPrefSize(120, 25);
+        newProjectPathLabel.setPrefSize(135, 25);
         newProjectPathField = new TextField(newProjectPath.toString());
         newProjectPathField.setEditable(true);
         chooseNewProjectButton = new Button("browse");
-        chooseNewProjectButton.setPrefSize(60, 0);
+        chooseNewProjectButton.setPrefSize(70, 0);
 
         AnchorPane newProjectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(newProjectPathLabel, 5d);
@@ -311,11 +304,11 @@ public class PatcherWindow extends Application {
         newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
 
         adminPatchPathLabel = new Label("Path to patch folder:");
-        adminPatchPathLabel.setPrefSize(120, 25);
+        adminPatchPathLabel.setPrefSize(135, 25);
         adminPatchPathField = new TextField(patchFolderPath.toString());
         adminPatchPathField.setEditable(true);
         adminChoosePatchButton = new Button("browse");
-        adminChoosePatchButton.setPrefSize(60, 0);
+        adminChoosePatchButton.setPrefSize(70, 0);
 
         AnchorPane patchPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(adminPatchPathLabel, 5d);
@@ -325,14 +318,15 @@ public class PatcherWindow extends Application {
         patchPathPanel.getChildren().addAll(adminPatchPathLabel, adminPatchPathField, adminChoosePatchButton);
 
         rememberPathsCheckbox = new CheckBox("Remember");
-        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject("patchingInfo").getBoolean("rememberPaths"));
+        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(AuthWindow.os)
+                .getJSONObject("patchingInfo").getBoolean("rememberPaths"));
 
         VBox checkboxPanel = new VBox();
         checkboxPanel.setPadding(new Insets(5));
         checkboxPanel.getChildren().addAll(rememberPathsCheckbox);
 
         createPatchButton = new Button("Create patch");
-        createPatchButton.setPrefSize(100, 0);
+        createPatchButton.setPrefSize(110, 0);
 
         activeCourgetesAdminAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
@@ -371,22 +365,19 @@ public class PatcherWindow extends Application {
             patchPath = Paths.get(patchPathField.getText());
             Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
 
-            if (!authWindow.config.has("patchingInfo")) {
-                authWindow.config.put("patchingInfo", new JSONObject());
+            if (!authWindow.config.getJSONObject(AuthWindow.os).has("patchingInfo")) {
+                authWindow.config.getJSONObject(AuthWindow.os).put("patchingInfo", new JSONObject());
             }
-            authWindow.config.getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
-            authWindow.config.getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
-            authWindow.config.getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
-            authWindow.config.getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.isSelected());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.isSelected());
 
-            try {
-                FileOutputStream jsonOutputStream;
-                jsonOutputStream = new FileOutputStream("config.json");
-                jsonOutputStream.write(authWindow.config.toString(4).getBytes());
-                jsonOutputStream.close();
-            } catch (JSONException | IOException e1) {
-                e1.printStackTrace();
-            }
+            authWindow.saveConfig();
 
             FileVisitor fileVisitor = new FileVisitor();
 
@@ -443,22 +434,19 @@ public class PatcherWindow extends Application {
             newProjectPath = Paths.get(newProjectPathField.getText());
             patchFolderPath = Paths.get(adminPatchPathField.getText());
 
-            if (!authWindow.config.has("patchCreationInfo")) {
-                authWindow.config.put("patchCreationInfo", new JSONObject());
+            if (!authWindow.config.getJSONObject(AuthWindow.os).has("patchCreationInfo")) {
+                authWindow.config.getJSONObject(AuthWindow.os).put("patchCreationInfo", new JSONObject());
             }
-            authWindow.config.getJSONObject("patchCreationInfo").put("patchPath", patchFolderPath.toString());
-            authWindow.config.getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
-            authWindow.config.getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
-            authWindow.config.getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchCreationInfo").put("patchPath", patchFolderPath.toString());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
+            authWindow.config.getJSONObject(AuthWindow.os)
+                    .getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
 
-            try {
-                FileOutputStream jsonOutputStream;
-                jsonOutputStream = new FileOutputStream("config.json");
-                jsonOutputStream.write(authWindow.config.toString(4).getBytes());
-                jsonOutputStream.close();
-            } catch (JSONException | IOException e1) {
-                e1.printStackTrace();
-            }
+            authWindow.saveConfig();
 
             FileVisitor fileVisitor = new FileVisitor(newProjectPath);
 
@@ -492,14 +480,7 @@ public class PatcherWindow extends Application {
             authWindow.config.getJSONObject("userInfo").put("login", authWindow.userLogin);
             authWindow.config.getJSONObject("userInfo").put("pass", authWindow.userPassword);
 
-            try {
-                FileOutputStream jsonOutputStream;
-                jsonOutputStream = new FileOutputStream("config.json");
-                jsonOutputStream.write(authWindow.config.toString(4).getBytes());
-                jsonOutputStream.close();
-            } catch (JSONException | IOException e1) {
-                e1.printStackTrace();
-            }
+            authWindow.saveConfig();
 
             authWindow.curAccess = AuthWindow.ACCESS.ADMIN;
             
