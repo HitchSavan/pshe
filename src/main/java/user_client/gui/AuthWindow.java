@@ -110,7 +110,7 @@ public class AuthWindow extends Stage {
         passPanel.getChildren().addAll(passLabel, passField);
 
         btnConnect = new Button("Connect");
-        btnConnect.setPrefSize(65, 25);
+        btnConnect.setPrefSize(75, 25);
 
         VBox startPanel = new VBox();
         startPanel.setAlignment(Pos.BOTTOM_CENTER);

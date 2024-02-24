@@ -116,8 +116,8 @@ public class PatcherWindow extends Application {
         addTab(tabsWindow, "Admin", adminTabEmpty);
 
         this.primaryStage.setMinWidth(300);
-        this.primaryStage.setMinHeight(220);
-        this.primaryStage.setMaxHeight(220);
+        this.primaryStage.setMinHeight(230);
+        this.primaryStage.setMaxHeight(230);
 
         this.primaryStage.setWidth(600);
         this.primaryStage.setTitle(windowName);
@@ -160,11 +160,11 @@ public class PatcherWindow extends Application {
         }
 
         projectPathLabel = new Label("Path to project:");
-        projectPathLabel.setPrefSize(90, 25);
+        projectPathLabel.setPrefSize(105, 25);
         projectPathField = new TextField(projectPath.toString());
         projectPathField.setEditable(true);
         chooseProjectButton = new Button("browse");
-        chooseProjectButton.setPrefSize(60, 0);
+        chooseProjectButton.setPrefSize(70, 0);
 
         AnchorPane projectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(projectPathLabel, 5d);
@@ -174,11 +174,11 @@ public class PatcherWindow extends Application {
         projectPathPanel.getChildren().addAll(projectPathLabel, projectPathField, chooseProjectButton);
 
         patchPathLabel = new Label("Path to patch:");
-        patchPathLabel.setPrefSize(90, 25);
+        patchPathLabel.setPrefSize(105, 25);
         patchPathField = new TextField(patchPath.toString());
         patchPathField.setEditable(true);
         choosePatchButton = new Button("browse");
-        choosePatchButton.setPrefSize(60, 0);
+        choosePatchButton.setPrefSize(70, 0);
 
         AnchorPane patchPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(patchPathLabel, 5d);
@@ -197,7 +197,7 @@ public class PatcherWindow extends Application {
         checkboxPanel.getChildren().addAll(rememberPathsCheckbox, replaceFilesCheckbox);
 
         applyPatchButton = new Button("Patch");
-        applyPatchButton.setPrefSize(50, 0);
+        applyPatchButton.setPrefSize(60, 0);
 
         activeCourgetesAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
@@ -283,11 +283,11 @@ public class PatcherWindow extends Application {
         adminTabEmpty.setContent(loginpanel);
 
         oldProjectPathLabel = new Label("Path to old version:");
-        oldProjectPathLabel.setPrefSize(120, 25);
+        oldProjectPathLabel.setPrefSize(135, 25);
         oldProjectPathField = new TextField(oldProjectPath.toString());
         oldProjectPathField.setEditable(true);
         chooseOldProjectButton = new Button("browse");
-        chooseOldProjectButton.setPrefSize(60, 0);
+        chooseOldProjectButton.setPrefSize(70, 0);
 
         AnchorPane oldProjectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(oldProjectPathLabel, 5d);
@@ -297,11 +297,11 @@ public class PatcherWindow extends Application {
         oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
 
         newProjectPathLabel = new Label("Path to new version:");
-        newProjectPathLabel.setPrefSize(120, 25);
+        newProjectPathLabel.setPrefSize(135, 25);
         newProjectPathField = new TextField(newProjectPath.toString());
         newProjectPathField.setEditable(true);
         chooseNewProjectButton = new Button("browse");
-        chooseNewProjectButton.setPrefSize(60, 0);
+        chooseNewProjectButton.setPrefSize(70, 0);
 
         AnchorPane newProjectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(newProjectPathLabel, 5d);
@@ -311,11 +311,11 @@ public class PatcherWindow extends Application {
         newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
 
         adminPatchPathLabel = new Label("Path to patch folder:");
-        adminPatchPathLabel.setPrefSize(120, 25);
+        adminPatchPathLabel.setPrefSize(135, 25);
         adminPatchPathField = new TextField(patchFolderPath.toString());
         adminPatchPathField.setEditable(true);
         adminChoosePatchButton = new Button("browse");
-        adminChoosePatchButton.setPrefSize(60, 0);
+        adminChoosePatchButton.setPrefSize(70, 0);
 
         AnchorPane patchPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(adminPatchPathLabel, 5d);
@@ -332,7 +332,7 @@ public class PatcherWindow extends Application {
         checkboxPanel.getChildren().addAll(rememberPathsCheckbox);
 
         createPatchButton = new Button("Create patch");
-        createPatchButton.setPrefSize(100, 0);
+        createPatchButton.setPrefSize(110, 0);
 
         activeCourgetesAdminAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
