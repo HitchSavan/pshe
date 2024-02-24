@@ -30,7 +30,6 @@ public class UnpackResources {
                     throw new IOException("Failed to create directory " + parent);
                 }
 
-                // write file content
                 FileOutputStream fos = new FileOutputStream(newFile);
                 int len;
                 while ((len = zis.read(buffer)) > 0) {

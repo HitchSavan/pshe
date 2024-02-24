@@ -34,6 +34,7 @@ public class AuthWindow extends Stage {
     
     String windowName;
     JSONObject config;
+    public static String os = System.getProperty("os.name").toLowerCase();
 
     String userLogin = "";
     String userPassword = "";
@@ -69,25 +70,23 @@ public class AuthWindow extends Stage {
             }
         } else {
             config.put("userInfo", new JSONObject().put("login", "").put("pass", ""));
-            config.put("patchingInfo", new JSONObject()
+        }
+        
+        if (!config.has(os)) {
+            config.put(os, new JSONObject());
+            config.getJSONObject(os)
+                    .put("patchingInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("replaceFiles", false)
                     .put("projectPath", "")
                     .put("patchPath", ""));
-            config.put("patchCreationInfo", new JSONObject()
+            config.getJSONObject(os)
+                    .put("patchCreationInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("patchPath", "")
                     .put("newProjectPath", "")
                     .put("oldProjectPath", ""));
-
-            try {
-                FileOutputStream jsonOutputStream;
-                jsonOutputStream = new FileOutputStream("config.json");
-                jsonOutputStream.write(config.toString(4).getBytes());
-                jsonOutputStream.close();
-            } catch (JSONException | IOException e1) {
-                e1.printStackTrace();
-            }
+            saveConfig();
         }
 
         userLogin = config.getJSONObject("userInfo").getString("login");
@@ -150,19 +149,23 @@ public class AuthWindow extends Stage {
             config.getJSONObject("userInfo").put("login", userLogin);
             config.getJSONObject("userInfo").put("pass", userPassword);
 
-            try {
-                FileOutputStream jsonOutputStream;
-                jsonOutputStream = new FileOutputStream("config.json");
-                jsonOutputStream.write(config.toString(4).getBytes());
-                jsonOutputStream.close();
-            } catch (JSONException | IOException e1) {
-                e1.printStackTrace();
-            }
+            saveConfig();
 
             curAccess = ACCESS.ADMIN;
             
             hide();
             // TODO: ADD ADMIN VERIFICATION
         });
+    }
+
+    public void saveConfig() {
+        try {
+            FileOutputStream jsonOutputStream;
+            jsonOutputStream = new FileOutputStream("config.json");
+            jsonOutputStream.write(config.toString(4).getBytes());
+            jsonOutputStream.close();
+        } catch (JSONException | IOException e1) {
+            e1.printStackTrace();
+        }
     }
 }
