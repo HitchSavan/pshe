@@ -16,24 +16,37 @@ import javax.swing.JFileChooser;
 import org.json.JSONObject;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import patcher.files_utils.FileVisitor;
 import patcher.files_utils.UnpackResources;
 import patcher.patching_utils.Patcher;
 import patcher.patching_utils.RunCourgette;
+import patcher.patching_utils.Patch;
 
 public class PatcherWindow extends Application {
 
     String windowName;
+    int defaultWindowWidth = 600;
+    int defaultWindowHeight = 230;
+
     Stage primaryStage;
     Scene primaryScene;
     AuthWindow authWindow;
@@ -45,6 +58,9 @@ public class PatcherWindow extends Application {
     Tab adminTab;
     HashMap<String, Integer> tabsNames = new HashMap<>();
     VBox adminTabContent;
+    
+    Patch checkoutPatch = null;
+    Button checkoutButton;
 
     Label patchPathLabel;
     TextField patchPathField;
@@ -78,15 +94,14 @@ public class PatcherWindow extends Application {
     Label loginMessage;
     Button loginButton;
 
-    int buttonColumnIndex = 0;
     Path projectPath;
     Path patchPath;
     Path oldProjectPath;
     Path newProjectPath;
     Path patchFolderPath;
 
-    Label activeCourgetesAmount;
-    Label activeCourgetesAdminAmount;
+    Label activeCourgetesApplyAmount;
+    Label activeCourgetesGenAmount;
     
     public static void main(String[] args) {
         Application.launch();
@@ -105,19 +120,20 @@ public class PatcherWindow extends Application {
 
     private void setupUi() {
         setupMainTabUi();
-        // setupHistoryTabUi();
+        setupHistoryTabUi();
         setupAdminTabUi();
         
         tabsWindow = new TabPane();
         addTab(tabsWindow, "Patching", mainTab);
-        // addTab(tabsWindow, "History", historyTab);
+        addTab(tabsWindow, "History", historyTab);
         addTab(tabsWindow, "Admin", adminTabEmpty);
 
         this.primaryStage.setMinWidth(300);
-        this.primaryStage.setMinHeight(230);
-        this.primaryStage.setMaxHeight(230);
+        this.primaryStage.setMinHeight(defaultWindowHeight);
+        // this.primaryStage.setMaxHeight(defaultWindowHeight);
 
-        this.primaryStage.setWidth(600);
+        this.primaryStage.setWidth(defaultWindowWidth);
+        this.primaryStage.setHeight(defaultWindowHeight);
         this.primaryStage.setTitle(windowName);
 
         primaryScene = new Scene(tabsWindow);
@@ -192,76 +208,101 @@ public class PatcherWindow extends Application {
         applyPatchButton = new Button("Patch");
         applyPatchButton.setPrefSize(60, 0);
 
-        activeCourgetesAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
         VBox tabContent = new VBox();
         tabContent.setAlignment(Pos.TOP_CENTER);
         tabContent.setPadding(new Insets(5));
         tabContent.getChildren().addAll(projectPathPanel, patchPathPanel,
-                checkboxPanel, applyPatchButton, activeCourgetesAmount);
+                checkboxPanel, applyPatchButton, activeCourgetesApplyAmount);
 
         mainTab = new Tab();
         mainTab.setContent(tabContent);
     }
 
-    // private void setupHistoryTabUi() {
-    //     historyTab = new JPanel();
-    //     historyTab.setLayout(new BoxLayout(historyTab, BoxLayout.PAGE_AXIS));
+    private void setupHistoryTabUi() {
+        // TODO: PATCH TABLE HISTORY PLACEHOLDER
+        String[] columnNames = {"Patch date", "Version from", "Version to", "Message"};
+        String[][] data = {
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+            {"01-12-2023", "31541", "31542", "last patch"},
+            {"30-10-2023", "26451", "31541", "second patch"},
+            {"05-02-2022", "5655", "26451", "first patch"},
+        };
 
-    //     // TODO: PATCH TABLE HISTORY PLACEHOLDER
-    //     String[] columnNames = {"Patch date", "Version", "Message", ""};
-    //     Object[][] data = {
-    //         {"01-12-2023", "31541", "last patch", "checkout"},
-    //         {"30-10-2023", "26451", "second patch", "checkout"},
-    //         {"05-02-2023", "5655", "first patch", "checkout"}
-    //     };
+        ObservableList<Patch> patches = FXCollections.observableArrayList();
 
-    //     buttonColumnIndex = data[0].length - 1;
+        for (String[] row: data) {
+            patches.add(new Patch(row[0], row[1], row[2], row[3]));
+        }
 
-    //     DefaultTableModel model = new DefaultTableModel(data, columnNames) {
-    //         @Override
-    //         public boolean isCellEditable(int row, int column) {
-    //            // set all cells non-editable, except buttons
-    //            return column == buttonColumnIndex;
-    //         }
-    //     };
+        TableView<Patch> table = new TableView<>(patches);
 
-    //     JTable table = new JTable(model){         
-    //         public String getToolTipText(MouseEvent e) {
-    //             String tip = null;
-    //             java.awt.Point p = e.getPoint();
-    //             int rowIndex = rowAtPoint(p);
-    //             int colIndex = columnAtPoint(p);
+        TableColumn<Patch, String> dateColumn = new TableColumn<>(columnNames[0]);
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("patchDate"));
+        table.getColumns().add(dateColumn);
 
-    //             if (colIndex == buttonColumnIndex)
-    //                 return null;
+        TableColumn<Patch, String> versionFromColumn = new TableColumn<>(columnNames[1]);
+        versionFromColumn.setCellValueFactory(new PropertyValueFactory<>("versionFrom"));
+        table.getColumns().add(versionFromColumn);
 
-    //             try {
-    //                 tip = getValueAt(rowIndex, colIndex).toString();
-    //             } catch (RuntimeException e1) {}
+        TableColumn<Patch, String> versionToColumn = new TableColumn<>(columnNames[2]);
+        versionToColumn.setCellValueFactory(new PropertyValueFactory<>("versionTo"));
+        table.getColumns().add(versionToColumn);
 
-    //             return tip;
-    //         }
-    //     };
+        TableColumn<Patch, String> messageColumn = new TableColumn<>(columnNames[3]);
+        messageColumn.setCellValueFactory(new PropertyValueFactory<>("message"));
+        table.getColumns().add(messageColumn);
 
-    //     TableColumnModel columnModel =  table.getColumnModel();
-    //     columnModel.getColumn(0).setMinWidth(70);
-    //     columnModel.getColumn(0).setMaxWidth(70);
-    //     columnModel.getColumn(1).setMinWidth(60);
-    //     columnModel.getColumn(1).setMaxWidth(60);
-    //     columnModel.getColumn(columnModel.getColumnCount()-1).setMinWidth(90);
-    //     columnModel.getColumn(columnModel.getColumnCount()-1).setMaxWidth(90);
+        checkoutButton = new Button("Checkout");
+        checkoutButton.setDisable(true);
 
-    //     Action checkout = new AbstractAction() {
-    //         public void actionPerformed(ActionEvent e) {
-    //             JTable table = (JTable)e.getSource();
-    //         }
-    //     };
-        
-    //     ButtonColumn buttonColumn = new ButtonColumn(table, checkout, 3);
-    //     buttonColumn.setMnemonic(KeyEvent.VK_ENTER);
-    //     historyTab.add(new JScrollPane(table));
-    // }
+        TableView.TableViewSelectionModel<Patch> selectionModel = table.getSelectionModel();
+        selectionModel.selectedItemProperty().addListener(new ChangeListener<Patch>() {
+            @Override
+            public void changed(ObservableValue<? extends Patch> val, Patch oldVal, Patch newVal) {
+                if (newVal != null) {
+                    checkoutPatch = newVal;
+                    checkoutButton.setDisable(false);
+                }
+            }
+        });
+
+        HBox tabContent = new HBox();
+        HBox.setHgrow(table, Priority.ALWAYS);
+        tabContent.setAlignment(Pos.CENTER_LEFT);
+        tabContent.setPadding(new Insets(5));
+        tabContent.getChildren().addAll(table, checkoutButton);
+
+        historyTab = new Tab();
+        historyTab.setContent(tabContent);
+    }
 
     private void setupAdminTabUi() {
         VBox loginpanel = new VBox();
@@ -328,13 +369,13 @@ public class PatcherWindow extends Application {
         createPatchButton = new Button("Create patch");
         createPatchButton.setPrefSize(110, 0);
 
-        activeCourgetesAdminAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeCourgetesGenAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
         adminTabContent = new VBox();
         adminTabContent.setAlignment(Pos.TOP_CENTER);
         adminTabContent.setPadding(new Insets(5));
         adminTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
-                patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesAdminAmount);
+                patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesGenAmount);
 
         adminTab = new Tab();
         adminTab.setContent(adminTabContent);
@@ -426,7 +467,7 @@ public class PatcherWindow extends Application {
                     e1.printStackTrace();
                 }
     
-                Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesAmount);
+                Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount);
             }
         });
         createPatchButton.setOnAction(e -> {
@@ -459,14 +500,23 @@ public class PatcherWindow extends Application {
             fileVisitor.walkFileTree(newProjectPath);
             newFiles = new ArrayList<>(fileVisitor.allFiles);
             
-            generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesAdminAmount);
-            generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesAdminAmount);
+            generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
+            generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
         });
         loginButton.setOnAction(e -> {
             if (authWindow.isShowing())
                 authWindow.hide();
             else
                 authWindow.show();
+        });
+        checkoutButton.setOnAction(e -> {
+            if (checkoutPatch != null) {
+                // TODO: CHECKOUT PLACEHOLDER
+                System.out.print("Checkout to version ");
+                System.out.println(checkoutPatch.getVersionTo());
+            } else {
+                System.out.println("No version selected");
+            }
         });
 
         authWindow.btnConnect.setOnAction(e -> {
