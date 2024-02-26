@@ -106,7 +106,14 @@ public class PatcherWindow extends Application {
     Label activeCourgetesGenAmount;
     
     public static void runApp(String[] args) {
-        Application.launch(args);
+        System.setProperty("javafx.preloader", CustomPreloader.class.getCanonicalName());
+        Application.launch(PatcherWindow.class, args);
+    }
+
+    @Override
+    public void init() throws Exception {
+
+        super.init();
     }
 
     @Override
@@ -118,6 +125,7 @@ public class PatcherWindow extends Application {
 
         setupUi();
         setupEvents();
+        setupMainWindowUi();
     }
 
     private void setupUi() {
@@ -130,6 +138,9 @@ public class PatcherWindow extends Application {
         addTab(tabsWindow, "History", historyTab);
         addTab(tabsWindow, "Admin", adminTab);
 
+    }
+
+    private void setupMainWindowUi() {
         this.primaryStage.setMinWidth(300);
         this.primaryStage.setMinHeight(defaultWindowHeight);
         // this.primaryStage.setMaxHeight(defaultWindowHeight);
@@ -140,6 +151,12 @@ public class PatcherWindow extends Application {
 
         primaryScene = new Scene(tabsWindow);
         this.primaryStage.setScene(primaryScene);
+        
+        this.primaryStage.setOnCloseRequest(e -> {
+            UnpackResources.deleteDirectory("tmp");
+            System.exit(0);
+        });
+
         this.primaryStage.show();
     }
 
@@ -389,10 +406,6 @@ public class PatcherWindow extends Application {
     }
 
     private void setupEvents() {
-        this.primaryStage.setOnCloseRequest(e -> {
-            UnpackResources.deleteDirectory("tmp");
-            System.exit(0);
-        });
         choosePatchButton.setOnAction(e -> {
             choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
