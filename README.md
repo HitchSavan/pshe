@@ -28,3 +28,11 @@ If "Replase old files" is selected - pathed version of files will replace the ol
 Used to create patch files from two instances of same project. You need to login for this (TODO).
 
 "Remember" checkbox selects whether the choosen paths will be saved the next time program is run.
+
+## Server patching - using PSHE API (TODO)
+
+### "History" tab
+
+Used to "jump" to specific version. You need to login for this (TODO).
+
+You need to select needed version row and press checkout button.
