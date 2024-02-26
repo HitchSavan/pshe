@@ -105,8 +105,8 @@ public class PatcherWindow extends Application {
     Label activeCourgetesApplyAmount;
     Label activeCourgetesGenAmount;
     
-    public static void main(String[] args) {
-        Application.launch();
+    public static void runApp(String[] args) {
+        Application.launch(args);
     }
 
     @Override
