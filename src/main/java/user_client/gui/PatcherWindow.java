@@ -26,10 +26,10 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import user_client.utils.FileVisitor;
-import user_client.utils.Patcher;
-import user_client.utils.RunCourgette;
-import user_client.utils.UnpackResources;
+import patcher.files_utils.FileVisitor;
+import patcher.files_utils.UnpackResources;
+import patcher.patching_utils.Patcher;
+import patcher.patching_utils.RunCourgette;
 
 public class PatcherWindow extends Application {
 
@@ -136,20 +136,20 @@ public class PatcherWindow extends Application {
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
-        projectPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+        projectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getString("projectPath"));
-        patchPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+        patchPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getString("patchPath"));
-        rememberPaths = authWindow.config.getJSONObject(AuthWindow.os)
+        rememberPaths = authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("rememberPaths");
-        replaceFiles = authWindow.config.getJSONObject(AuthWindow.os)
+        replaceFiles = authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("replaceFiles");
 
-        oldProjectPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+        oldProjectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("oldProjectPath"));
-        newProjectPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+        newProjectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("newProjectPath"));
-        patchFolderPath = Paths.get(authWindow.config.getJSONObject(AuthWindow.os)
+        patchFolderPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("patchPath"));
 
         projectPathLabel = new Label("Path to project:");
@@ -318,7 +318,7 @@ public class PatcherWindow extends Application {
         patchPathPanel.getChildren().addAll(adminPatchPathLabel, adminPatchPathField, adminChoosePatchButton);
 
         rememberPathsCheckbox = new CheckBox("Remember");
-        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(AuthWindow.os)
+        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("rememberPaths"));
 
         VBox checkboxPanel = new VBox();
@@ -365,16 +365,16 @@ public class PatcherWindow extends Application {
             patchPath = Paths.get(patchPathField.getText());
             Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
 
-            if (!authWindow.config.getJSONObject(AuthWindow.os).has("patchingInfo")) {
-                authWindow.config.getJSONObject(AuthWindow.os).put("patchingInfo", new JSONObject());
+            if (!authWindow.config.getJSONObject(RunCourgette.os).has("patchingInfo")) {
+                authWindow.config.getJSONObject(RunCourgette.os).put("patchingInfo", new JSONObject());
             }
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchingInfo").put("patchPath", patchPath.toString());
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.isSelected());
 
             authWindow.saveConfig();
@@ -434,16 +434,16 @@ public class PatcherWindow extends Application {
             newProjectPath = Paths.get(newProjectPathField.getText());
             patchFolderPath = Paths.get(adminPatchPathField.getText());
 
-            if (!authWindow.config.getJSONObject(AuthWindow.os).has("patchCreationInfo")) {
-                authWindow.config.getJSONObject(AuthWindow.os).put("patchCreationInfo", new JSONObject());
+            if (!authWindow.config.getJSONObject(RunCourgette.os).has("patchCreationInfo")) {
+                authWindow.config.getJSONObject(RunCourgette.os).put("patchCreationInfo", new JSONObject());
             }
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchCreationInfo").put("patchPath", patchFolderPath.toString());
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
-            authWindow.config.getJSONObject(AuthWindow.os)
+            authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
 
             authWindow.saveConfig();

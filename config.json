@@ -30,5 +30,19 @@
             "newProjectPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\test files\\new",
             "oldProjectPath": "D:\\projects\\Jabix\\pshe\\PSHE_user_client\\test files\\old"
         }
+    },
+    "windows 10": {
+        "patchingInfo": {
+            "rememberPaths": false,
+            "replaceFiles": false,
+            "projectPath": "",
+            "patchPath": ""
+        },
+        "patchCreationInfo": {
+            "rememberPaths": false,
+            "patchPath": "",
+            "newProjectPath": "",
+            "oldProjectPath": ""
+        }
     }
 }

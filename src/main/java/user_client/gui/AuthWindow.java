@@ -19,6 +19,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import patcher.patching_utils.RunCourgette;
 
 public class AuthWindow extends Stage {
 
@@ -34,7 +35,6 @@ public class AuthWindow extends Stage {
     
     String windowName;
     JSONObject config;
-    public static String os = System.getProperty("os.name").toLowerCase();
 
     String userLogin = "";
     String userPassword = "";
@@ -72,15 +72,15 @@ public class AuthWindow extends Stage {
             config.put("userInfo", new JSONObject().put("login", "").put("pass", ""));
         }
         
-        if (!config.has(os)) {
-            config.put(os, new JSONObject());
-            config.getJSONObject(os)
+        if (!config.has(RunCourgette.os)) {
+            config.put(RunCourgette.os, new JSONObject());
+            config.getJSONObject(RunCourgette.os)
                     .put("patchingInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("replaceFiles", false)
                     .put("projectPath", "")
                     .put("patchPath", ""));
-            config.getJSONObject(os)
+            config.getJSONObject(RunCourgette.os)
                     .put("patchCreationInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("patchPath", "")

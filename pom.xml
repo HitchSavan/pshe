@@ -23,25 +23,25 @@
       <version>20231013</version>
     </dependency>
     
-    <!-- <dependency>
+    <dependency>
       <groupId>pshe_patcher</groupId>
       <artifactId>PSHE_Patcher</artifactId>
       <version>closedalpha.0.0.1</version>
       <scope>system</scope>
       <systemPath>${pom.basedir}/lib/PSHE_Patcher-closedalpha.0.0.1.jar</systemPath>
-    </dependency> -->
-
-    <dependency>
-      <groupId>com.github.shyiko.klob</groupId>
-      <artifactId>klob</artifactId>
-      <version>0.2.0</version>
-      <classifier>kalvanized</classifier>
     </dependency>
     
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
       <version>12.0.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.shyiko.klob</groupId>
+      <artifactId>klob</artifactId>
+      <version>0.2.0</version>
+      <classifier>kalvanized</classifier>
     </dependency>
   </dependencies>
 
