@@ -54,10 +54,10 @@ public class PatcherWindow extends Application {
     TabPane tabsWindow;
     Tab mainTab;
     Tab historyTab;
-    Tab adminTabEmpty;
     Tab adminTab;
     HashMap<String, Integer> tabsNames = new HashMap<>();
     VBox adminTabContent;
+    HBox historyTabContent;
     
     Patch checkoutPatch = null;
     Button checkoutButton;
@@ -91,8 +91,10 @@ public class PatcherWindow extends Application {
     Button applyPatchButton;
     Button createPatchButton;
 
-    Label loginMessage;
-    Button loginButton;
+    Label adminLoginMessage;
+    Button adminLoginButton;
+    Label historyLoginMessage;
+    Button historyLoginButton;
 
     Path projectPath;
     Path patchPath;
@@ -126,7 +128,7 @@ public class PatcherWindow extends Application {
         tabsWindow = new TabPane();
         addTab(tabsWindow, "Patching", mainTab);
         addTab(tabsWindow, "History", historyTab);
-        addTab(tabsWindow, "Admin", adminTabEmpty);
+        addTab(tabsWindow, "Admin", adminTab);
 
         this.primaryStage.setMinWidth(300);
         this.primaryStage.setMinHeight(defaultWindowHeight);
@@ -221,6 +223,17 @@ public class PatcherWindow extends Application {
     }
 
     private void setupHistoryTabUi() {
+        VBox loginpanel = new VBox();
+        loginpanel.setAlignment(Pos.CENTER);
+
+        historyLoginMessage = new Label("You are not logged in");
+        historyLoginButton = new Button("Login");
+
+        loginpanel.getChildren().addAll(historyLoginMessage, historyLoginButton);
+
+        historyTab = new Tab();
+        historyTab.setContent(loginpanel);
+
         // TODO: PATCH TABLE HISTORY PLACEHOLDER
         String[] columnNames = {"Patch date", "Version from", "Version to", "Message"};
         String[][] data = {
@@ -294,27 +307,24 @@ public class PatcherWindow extends Application {
             }
         });
 
-        HBox tabContent = new HBox();
+        historyTabContent = new HBox();
         HBox.setHgrow(table, Priority.ALWAYS);
-        tabContent.setAlignment(Pos.CENTER_LEFT);
-        tabContent.setPadding(new Insets(5));
-        tabContent.getChildren().addAll(table, checkoutButton);
-
-        historyTab = new Tab();
-        historyTab.setContent(tabContent);
+        historyTabContent.setAlignment(Pos.CENTER_LEFT);
+        historyTabContent.setPadding(new Insets(5));
+        historyTabContent.getChildren().addAll(table, checkoutButton);
     }
 
     private void setupAdminTabUi() {
         VBox loginpanel = new VBox();
         loginpanel.setAlignment(Pos.CENTER);
 
-        loginMessage = new Label("You are not logged in");
-        loginButton = new Button("Login");
+        adminLoginMessage = new Label("You are not logged in");
+        adminLoginButton = new Button("Login");
 
-        loginpanel.getChildren().addAll(loginMessage, loginButton);
+        loginpanel.getChildren().addAll(adminLoginMessage, adminLoginButton);
 
-        adminTabEmpty = new Tab();
-        adminTabEmpty.setContent(loginpanel);
+        adminTab = new Tab();
+        adminTab.setContent(loginpanel);
 
         oldProjectPathLabel = new Label("Path to old version:");
         oldProjectPathLabel.setPrefSize(135, 25);
@@ -376,9 +386,6 @@ public class PatcherWindow extends Application {
         adminTabContent.setPadding(new Insets(5));
         adminTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
                 patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesGenAmount);
-
-        adminTab = new Tab();
-        adminTab.setContent(adminTabContent);
     }
 
     private void setupEvents() {
@@ -503,12 +510,20 @@ public class PatcherWindow extends Application {
             generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
         });
-        loginButton.setOnAction(e -> {
+
+        adminLoginButton.setOnAction(e -> {
             if (authWindow.isShowing())
                 authWindow.hide();
             else
                 authWindow.show();
         });
+        historyLoginButton.setOnAction(e -> {
+            if (authWindow.isShowing())
+                authWindow.hide();
+            else
+                authWindow.show();
+        });
+
         checkoutButton.setOnAction(e -> {
             if (checkoutPatch != null) {
                 // TODO: CHECKOUT PLACEHOLDER
@@ -538,6 +553,7 @@ public class PatcherWindow extends Application {
             
             if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
                 tabsWindow.getTabs().get(tabsNames.get("Admin")).setContent(adminTabContent);
+                tabsWindow.getTabs().get(tabsNames.get("History")).setContent(historyTabContent);
             }
         });
     }
