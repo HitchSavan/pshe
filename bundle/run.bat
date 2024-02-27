@@ -1,0 +1,1 @@
+%~dp0\jre\bin\java -jar %~dp0\PSHE_Client-closedalpha.0.0.1.one-jar.jar

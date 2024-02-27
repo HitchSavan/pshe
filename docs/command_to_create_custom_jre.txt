@@ -1,2 +1,4 @@
-jdeps .\target\PSHE_Client-closedalpha.0.0.1.one-jar.jar
-jlink --add-modules java.base,java.desktop --output jre --compress=2
+jdeps --list-deps .\target\PSHE_Client-closedalpha.0.0.1.one-jar.jar
+jlink --module-path javafx-jmods-21.0.2 --add-modules java.base,javafx.controls,javafx.base,javafx.graphics,javafx.media,javafx.web --output bundle/jre --compress=2
+
+docs\warp-packer --arch windows-x64 --input_dir bundle --exec run.bat --output patcher_ui.exe
