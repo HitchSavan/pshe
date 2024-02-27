@@ -44,7 +44,7 @@ import patcher.patching_utils.Patch;
 
 public class PatcherWindow extends Application {
 
-    String windowName;
+    String windowName = "PSHE patcher";
     int defaultWindowWidth = 600;
     int defaultWindowHeight = 260;
 
@@ -71,23 +71,18 @@ public class PatcherWindow extends Application {
     Patch checkoutPatch = null;
     Button checkoutButton;
 
-    Label patchPathLabel;
     TextField patchPathField;
     Button choosePatchButton;
 
-    Label projectPathLabel;
     TextField projectPathField;
     Button chooseProjectButton;
 
-    Label genPatchPathLabel;
     TextField genPatchPathField;
     Button genChoosePatchButton;
 
-    Label oldProjectPathLabel;
     TextField oldProjectPathField;
     Button chooseOldProjectButton;
 
-    Label newProjectPathLabel;
     TextField newProjectPathField;
     Button chooseNewProjectButton;
 
@@ -100,9 +95,7 @@ public class PatcherWindow extends Application {
     Button applyPatchButton;
     Button createPatchButton;
 
-    Label adminLoginMessage;
     Button adminLoginButton;
-    Label historyLoginMessage;
     Button historyLoginButton;
 
     Path projectPath;
@@ -123,7 +116,7 @@ public class PatcherWindow extends Application {
     public void init() throws Exception {
         super.init();
         RunCourgette.unpackCourgette();
-        windowName = "PSHE patcher";
+        
         Platform.runLater(() -> {
             authWindow = new AuthWindow();
             setupFileUi();
@@ -165,13 +158,14 @@ public class PatcherWindow extends Application {
 
         this.primaryStage.setWidth(defaultWindowWidth);
         this.primaryStage.setHeight(defaultWindowHeight);
-        this.primaryStage.setTitle(windowName);
+        this.primaryStage.setTitle(windowName + " - FILE MODE");
 
         VBox mainPane = new VBox();
         VBox.setVgrow(fileTabs, Priority.ALWAYS);
         VBox.setVgrow(remoteTabs, Priority.ALWAYS);
 
         modeSwitchButton = new Button("Change to remote mode");
+        mainPane.setPadding(new Insets(0, 0, 5, 0));
         mainPane.setAlignment(Pos.CENTER);
 
         mainPane.getChildren().addAll(fileTabs, modeSwitchButton);
@@ -183,10 +177,12 @@ public class PatcherWindow extends Application {
             if (isFileMode) {
                 mainPane.getChildren().set(0, remoteTabs);
                 modeSwitchButton.setText("Change to file mode");
+                this.primaryStage.setTitle(windowName + " - REMOTE MODE");
                 isFileMode = false;
             } else {
                 mainPane.getChildren().set(0, fileTabs);
                 modeSwitchButton.setText("Change to remote mode");
+                this.primaryStage.setTitle(windowName + " - FILE MODE");
                 isFileMode = true;
             }
         });
@@ -228,7 +224,7 @@ public class PatcherWindow extends Application {
         patchFolderPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("patchPath"));
 
-        projectPathLabel = new Label("Path to project:");
+        Label projectPathLabel = new Label("Path to project:");
         projectPathLabel.setPrefSize(105, 25);
         projectPathField = new TextField(projectPath.toString());
         projectPathField.setEditable(true);
@@ -242,7 +238,7 @@ public class PatcherWindow extends Application {
         AnchorPane.setRightAnchor(chooseProjectButton, 5d);
         projectPathPanel.getChildren().addAll(projectPathLabel, projectPathField, chooseProjectButton);
 
-        patchPathLabel = new Label("Path to patch:");
+        Label patchPathLabel = new Label("Path to patch:");
         patchPathLabel.setPrefSize(105, 25);
         patchPathField = new TextField(patchPath.toString());
         patchPathField.setEditable(true);
@@ -281,6 +277,9 @@ public class PatcherWindow extends Application {
     }
 
     private void setupApplyRemoteTabUi() {
+
+        // setupLoginUi(applyRemoteTab, );
+
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
@@ -300,7 +299,7 @@ public class PatcherWindow extends Application {
         patchFolderPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("patchPath"));
 
-        projectPathLabel = new Label("Path to project:");
+        Label projectPathLabel = new Label("Path to project:");
         projectPathLabel.setPrefSize(105, 25);
         projectPathField = new TextField(projectPath.toString());
         projectPathField.setEditable(true);
@@ -323,8 +322,8 @@ public class PatcherWindow extends Application {
         checkboxPanel.setPadding(new Insets(5));
         checkboxPanel.getChildren().addAll(rememberPathsCheckbox, replaceFilesCheckbox);
 
-        applyPatchButton = new Button("Patch");
-        applyPatchButton.setPrefSize(60, 0);
+        applyPatchButton = new Button("Patch to latest version");
+        applyPatchButton.setPrefSize(150, 0);
 
         activeCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
@@ -338,16 +337,9 @@ public class PatcherWindow extends Application {
     }
 
     private void setupHistoryTabUi() {
-        VBox loginpanel = new VBox();
-        loginpanel.setAlignment(Pos.CENTER);
-
-        historyLoginMessage = new Label("You are not logged in");
-        historyLoginButton = new Button("Login");
-
-        loginpanel.getChildren().addAll(historyLoginMessage, historyLoginButton);
-
         historyTab = new Tab();
-        historyTab.setContent(loginpanel);
+        historyLoginButton = new Button();
+        setupLoginUi(historyTab, historyLoginButton);
 
         // TODO: PATCH TABLE HISTORY PLACEHOLDER
         String[] columnNames = {"Patch date", "Version from", "Version to", "Message"};
@@ -430,18 +422,11 @@ public class PatcherWindow extends Application {
     }
 
     private void setupAdminTabUi() {
-        VBox loginpanel = new VBox();
-        loginpanel.setAlignment(Pos.CENTER);
-
-        adminLoginMessage = new Label("You are not logged in");
-        adminLoginButton = new Button("Login");
-
-        loginpanel.getChildren().addAll(adminLoginMessage, adminLoginButton);
-
         adminTab = new Tab();
-        adminTab.setContent(loginpanel);
+        adminLoginButton = new Button();
+        setupLoginUi(adminTab, adminLoginButton);
         
-        oldProjectPathLabel = new Label("Path to old version:");
+        Label oldProjectPathLabel = new Label("Path to old version:");
         oldProjectPathLabel.setPrefSize(135, 25);
         oldProjectPathField = new TextField(oldProjectPath.toString());
         oldProjectPathField.setEditable(true);
@@ -455,7 +440,7 @@ public class PatcherWindow extends Application {
         AnchorPane.setRightAnchor(chooseOldProjectButton, 5d);
         oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
 
-        newProjectPathLabel = new Label("Path to new version:");
+        Label newProjectPathLabel = new Label("Path to new version:");
         newProjectPathLabel.setPrefSize(135, 25);
         newProjectPathField = new TextField(newProjectPath.toString());
         newProjectPathField.setEditable(true);
@@ -490,7 +475,7 @@ public class PatcherWindow extends Application {
     }
 
     private void setupGenTabUi() {
-        oldProjectPathLabel = new Label("Path to old version:");
+        Label oldProjectPathLabel = new Label("Path to old version:");
         oldProjectPathLabel.setPrefSize(135, 25);
         oldProjectPathField = new TextField(oldProjectPath.toString());
         oldProjectPathField.setEditable(true);
@@ -504,7 +489,7 @@ public class PatcherWindow extends Application {
         AnchorPane.setRightAnchor(chooseOldProjectButton, 5d);
         oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
 
-        newProjectPathLabel = new Label("Path to new version:");
+        Label newProjectPathLabel = new Label("Path to new version:");
         newProjectPathLabel.setPrefSize(135, 25);
         newProjectPathField = new TextField(newProjectPath.toString());
         newProjectPathField.setEditable(true);
@@ -518,7 +503,7 @@ public class PatcherWindow extends Application {
         AnchorPane.setRightAnchor(chooseNewProjectButton, 5d);
         newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
 
-        genPatchPathLabel = new Label("Path to patch folder:");
+        Label genPatchPathLabel = new Label("Path to patch folder:");
         genPatchPathLabel.setPrefSize(135, 25);
         genPatchPathField = new TextField(patchFolderPath.toString());
         genPatchPathField.setEditable(true);
@@ -553,6 +538,18 @@ public class PatcherWindow extends Application {
 
         genTab = new Tab();
         genTab.setContent(genTabContent);
+    }
+
+    private void setupLoginUi(Tab tab, Button button) {
+        VBox loginpanel = new VBox();
+        loginpanel.setAlignment(Pos.CENTER);
+
+        Label loginMessage = new Label("You are not logged in");
+        button.setText("Login");
+
+        loginpanel.getChildren().addAll(loginMessage, button);
+
+        tab.setContent(loginpanel);
     }
 
     private void setupEvents() {
