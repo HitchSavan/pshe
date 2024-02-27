@@ -46,17 +46,25 @@ public class PatcherWindow extends Application {
 
     String windowName;
     int defaultWindowWidth = 600;
-    int defaultWindowHeight = 230;
+    int defaultWindowHeight = 260;
 
     Stage primaryStage;
     Scene primaryScene;
     AuthWindow authWindow;
 
-    TabPane tabsWindow;
-    Tab mainTab;
+    TabPane fileTabs;
+    TabPane remoteTabs;
+
+    Tab applyTab;
+    Tab genTab;
+    Tab applyRemoteTab;
     Tab historyTab;
     Tab adminTab;
-    HashMap<String, Integer> tabsNames = new HashMap<>();
+
+    Button modeSwitchButton;
+    boolean isFileMode = true;
+
+    HashMap<TabPane, HashMap<String, Integer>> tabsNames = new HashMap<>();
     VBox adminTabContent;
     HBox historyTabContent;
     
@@ -71,9 +79,9 @@ public class PatcherWindow extends Application {
     TextField projectPathField;
     Button chooseProjectButton;
 
-    Label adminPatchPathLabel;
-    TextField adminPatchPathField;
-    Button adminChoosePatchButton;
+    Label genPatchPathLabel;
+    TextField genPatchPathField;
+    Button genChoosePatchButton;
 
     Label oldProjectPathLabel;
     TextField oldProjectPathField;
@@ -118,7 +126,8 @@ public class PatcherWindow extends Application {
         windowName = "PSHE patcher";
         Platform.runLater(() -> {
             authWindow = new AuthWindow();
-            setupUi();
+            setupFileUi();
+            setupRemoteUi();
             setupEvents();
         });
     }
@@ -129,16 +138,24 @@ public class PatcherWindow extends Application {
         setupMainWindowUi();
     }
 
-    private void setupUi() {
-        setupMainTabUi();
+    private void setupFileUi() {
+        setupApplyTabUi();
+        setupGenTabUi();
+        
+        fileTabs = new TabPane();
+        addTab(fileTabs, "Patching", applyTab);
+        addTab(fileTabs, "Generate", genTab);
+    }
+
+    private void setupRemoteUi() {
+        setupApplyRemoteTabUi();
         setupHistoryTabUi();
         setupAdminTabUi();
         
-        tabsWindow = new TabPane();
-        addTab(tabsWindow, "Patching", mainTab);
-        addTab(tabsWindow, "History", historyTab);
-        addTab(tabsWindow, "Admin", adminTab);
-
+        remoteTabs = new TabPane();
+        addTab(remoteTabs, "Patching", applyRemoteTab);
+        addTab(remoteTabs, "History", historyTab);
+        addTab(remoteTabs, "Generate", adminTab);
     }
 
     private void setupMainWindowUi() {
@@ -150,8 +167,29 @@ public class PatcherWindow extends Application {
         this.primaryStage.setHeight(defaultWindowHeight);
         this.primaryStage.setTitle(windowName);
 
-        primaryScene = new Scene(tabsWindow);
+        VBox mainPane = new VBox();
+        VBox.setVgrow(fileTabs, Priority.ALWAYS);
+        VBox.setVgrow(remoteTabs, Priority.ALWAYS);
+
+        modeSwitchButton = new Button("Change to remote mode");
+        mainPane.setAlignment(Pos.CENTER);
+
+        mainPane.getChildren().addAll(fileTabs, modeSwitchButton);
+
+        this.primaryScene = new Scene(mainPane);
         this.primaryStage.setScene(primaryScene);
+
+        modeSwitchButton.setOnAction(e -> {
+            if (isFileMode) {
+                mainPane.getChildren().set(0, remoteTabs);
+                modeSwitchButton.setText("Change to file mode");
+                isFileMode = false;
+            } else {
+                mainPane.getChildren().set(0, fileTabs);
+                modeSwitchButton.setText("Change to remote mode");
+                isFileMode = true;
+            }
+        });
         
         this.primaryStage.setOnCloseRequest(e -> {
             UnpackResources.deleteDirectory("tmp");
@@ -165,10 +203,12 @@ public class PatcherWindow extends Application {
         newTab.setText(tabName);
         newTab.setClosable(false);
         tabbedPane.getTabs().add(newTab);
-        tabsNames.put(tabName, tabbedPane.getTabs().size()-1);
+        if (!tabsNames.containsKey(tabbedPane))
+            tabsNames.put(tabbedPane, new HashMap<>());
+        tabsNames.get(tabbedPane).put(tabName, tabbedPane.getTabs().size()-1);
     }
 
-    private void setupMainTabUi() {
+    private void setupApplyTabUi() {
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
@@ -236,8 +276,65 @@ public class PatcherWindow extends Application {
         tabContent.getChildren().addAll(projectPathPanel, patchPathPanel,
                 checkboxPanel, applyPatchButton, activeCourgetesApplyAmount);
 
-        mainTab = new Tab();
-        mainTab.setContent(tabContent);
+        applyTab = new Tab();
+        applyTab.setContent(tabContent);
+    }
+
+    private void setupApplyRemoteTabUi() {
+        boolean rememberPaths = false;
+        boolean replaceFiles = false;
+
+        projectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchingInfo").getString("projectPath"));
+        patchPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchingInfo").getString("patchPath"));
+        rememberPaths = authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchingInfo").getBoolean("rememberPaths");
+        replaceFiles = authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchingInfo").getBoolean("replaceFiles");
+
+        oldProjectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchCreationInfo").getString("oldProjectPath"));
+        newProjectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchCreationInfo").getString("newProjectPath"));
+        patchFolderPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchCreationInfo").getString("patchPath"));
+
+        projectPathLabel = new Label("Path to project:");
+        projectPathLabel.setPrefSize(105, 25);
+        projectPathField = new TextField(projectPath.toString());
+        projectPathField.setEditable(true);
+        chooseProjectButton = new Button("browse");
+        chooseProjectButton.setPrefSize(70, 0);
+
+        AnchorPane projectPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(projectPathLabel, 5d);
+        AnchorPane.setLeftAnchor(projectPathField, 5d + projectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(projectPathField, 5d + chooseProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseProjectButton, 5d);
+        projectPathPanel.getChildren().addAll(projectPathLabel, projectPathField, chooseProjectButton);
+
+        rememberPathsCheckbox = new CheckBox("Remember");
+        rememberPathsCheckbox.setSelected(rememberPaths);
+        replaceFilesCheckbox = new CheckBox("Replace old files");
+        replaceFilesCheckbox.setSelected(replaceFiles);
+
+        VBox checkboxPanel = new VBox();
+        checkboxPanel.setPadding(new Insets(5));
+        checkboxPanel.getChildren().addAll(rememberPathsCheckbox, replaceFilesCheckbox);
+
+        applyPatchButton = new Button("Patch");
+        applyPatchButton.setPrefSize(60, 0);
+
+        activeCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+
+        VBox tabContent = new VBox();
+        tabContent.setAlignment(Pos.TOP_CENTER);
+        tabContent.setPadding(new Insets(5));
+        tabContent.getChildren().addAll(projectPathPanel, checkboxPanel, applyPatchButton, activeCourgetesApplyAmount);
+
+        applyRemoteTab = new Tab();
+        applyRemoteTab.setContent(tabContent);
     }
 
     private void setupHistoryTabUi() {
@@ -343,7 +440,7 @@ public class PatcherWindow extends Application {
 
         adminTab = new Tab();
         adminTab.setContent(loginpanel);
-
+        
         oldProjectPathLabel = new Label("Path to old version:");
         oldProjectPathLabel.setPrefSize(135, 25);
         oldProjectPathField = new TextField(oldProjectPath.toString());
@@ -372,20 +469,6 @@ public class PatcherWindow extends Application {
         AnchorPane.setRightAnchor(chooseNewProjectButton, 5d);
         newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
 
-        adminPatchPathLabel = new Label("Path to patch folder:");
-        adminPatchPathLabel.setPrefSize(135, 25);
-        adminPatchPathField = new TextField(patchFolderPath.toString());
-        adminPatchPathField.setEditable(true);
-        adminChoosePatchButton = new Button("browse");
-        adminChoosePatchButton.setPrefSize(70, 0);
-
-        AnchorPane patchPathPanel = new AnchorPane();
-        AnchorPane.setLeftAnchor(adminPatchPathLabel, 5d);
-        AnchorPane.setLeftAnchor(adminPatchPathField, 5d + adminPatchPathLabel.getPrefWidth());
-        AnchorPane.setRightAnchor(adminPatchPathField, 5d + adminChoosePatchButton.getPrefWidth());
-        AnchorPane.setRightAnchor(adminChoosePatchButton, 5d);
-        patchPathPanel.getChildren().addAll(adminPatchPathLabel, adminPatchPathField, adminChoosePatchButton);
-
         rememberPathsCheckbox = new CheckBox("Remember");
         rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("rememberPaths"));
@@ -403,15 +486,81 @@ public class PatcherWindow extends Application {
         adminTabContent.setAlignment(Pos.TOP_CENTER);
         adminTabContent.setPadding(new Insets(5));
         adminTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
+                checkboxPanel, createPatchButton, activeCourgetesGenAmount);
+    }
+
+    private void setupGenTabUi() {
+        oldProjectPathLabel = new Label("Path to old version:");
+        oldProjectPathLabel.setPrefSize(135, 25);
+        oldProjectPathField = new TextField(oldProjectPath.toString());
+        oldProjectPathField.setEditable(true);
+        chooseOldProjectButton = new Button("browse");
+        chooseOldProjectButton.setPrefSize(70, 0);
+
+        AnchorPane oldProjectPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(oldProjectPathLabel, 5d);
+        AnchorPane.setLeftAnchor(oldProjectPathField, 5d + oldProjectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(oldProjectPathField, 5d + chooseOldProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseOldProjectButton, 5d);
+        oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
+
+        newProjectPathLabel = new Label("Path to new version:");
+        newProjectPathLabel.setPrefSize(135, 25);
+        newProjectPathField = new TextField(newProjectPath.toString());
+        newProjectPathField.setEditable(true);
+        chooseNewProjectButton = new Button("browse");
+        chooseNewProjectButton.setPrefSize(70, 0);
+
+        AnchorPane newProjectPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(newProjectPathLabel, 5d);
+        AnchorPane.setLeftAnchor(newProjectPathField, 5d + newProjectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(newProjectPathField, 5d + chooseNewProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseNewProjectButton, 5d);
+        newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
+
+        genPatchPathLabel = new Label("Path to patch folder:");
+        genPatchPathLabel.setPrefSize(135, 25);
+        genPatchPathField = new TextField(patchFolderPath.toString());
+        genPatchPathField.setEditable(true);
+        genChoosePatchButton = new Button("browse");
+        genChoosePatchButton.setPrefSize(70, 0);
+
+        AnchorPane patchPathPanel = new AnchorPane();
+        AnchorPane.setLeftAnchor(genPatchPathLabel, 5d);
+        AnchorPane.setLeftAnchor(genPatchPathField, 5d + genPatchPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(genPatchPathField, 5d + genChoosePatchButton.getPrefWidth());
+        AnchorPane.setRightAnchor(genChoosePatchButton, 5d);
+        patchPathPanel.getChildren().addAll(genPatchPathLabel, genPatchPathField, genChoosePatchButton);
+
+        rememberPathsCheckbox = new CheckBox("Remember");
+        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(RunCourgette.os)
+                .getJSONObject("patchingInfo").getBoolean("rememberPaths"));
+
+        VBox checkboxPanel = new VBox();
+        checkboxPanel.setPadding(new Insets(5));
+        checkboxPanel.getChildren().addAll(rememberPathsCheckbox);
+
+        createPatchButton = new Button("Create patch");
+        createPatchButton.setPrefSize(110, 0);
+
+        activeCourgetesGenAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+
+        VBox genTabContent = new VBox();
+        genTabContent.setAlignment(Pos.TOP_CENTER);
+        genTabContent.setPadding(new Insets(5));
+        genTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
                 patchPathPanel, checkboxPanel, createPatchButton, activeCourgetesGenAmount);
+
+        genTab = new Tab();
+        genTab.setContent(genTabContent);
     }
 
     private void setupEvents() {
         choosePatchButton.setOnAction(e -> {
             choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
-        adminChoosePatchButton.setOnAction(e -> {
-            choosePath(adminPatchPathField, JFileChooser.DIRECTORIES_ONLY);
+        genChoosePatchButton.setOnAction(e -> {
+            choosePath(genPatchPathField, JFileChooser.DIRECTORIES_ONLY);
         });
         chooseProjectButton.setOnAction(e -> {
             choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
@@ -494,7 +643,7 @@ public class PatcherWindow extends Application {
         createPatchButton.setOnAction(e -> {
             oldProjectPath = Paths.get(oldProjectPathField.getText());
             newProjectPath = Paths.get(newProjectPathField.getText());
-            patchFolderPath = Paths.get(adminPatchPathField.getText());
+            patchFolderPath = Paths.get(genPatchPathField.getText());
 
             if (!authWindow.config.getJSONObject(RunCourgette.os).has("patchCreationInfo")) {
                 authWindow.config.getJSONObject(RunCourgette.os).put("patchCreationInfo", new JSONObject());
@@ -566,8 +715,8 @@ public class PatcherWindow extends Application {
             authWindow.hide();
             
             if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
-                tabsWindow.getTabs().get(tabsNames.get("Admin")).setContent(adminTabContent);
-                tabsWindow.getTabs().get(tabsNames.get("History")).setContent(historyTabContent);
+                remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("Generate")).setContent(adminTabContent);
+                remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("History")).setContent(historyTabContent);
             }
         });
     }
