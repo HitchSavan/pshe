@@ -16,6 +16,7 @@ import javax.swing.JFileChooser;
 import org.json.JSONObject;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -112,19 +113,19 @@ public class PatcherWindow extends Application {
 
     @Override
     public void init() throws Exception {
-
         super.init();
+        RunCourgette.unpackCourgette();
+        windowName = "PSHE patcher";
+        Platform.runLater(() -> {
+            authWindow = new AuthWindow();
+            setupUi();
+            setupEvents();
+        });
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
-
-        windowName = "PSHE patcher";
-        authWindow = new AuthWindow();
-
-        setupUi();
-        setupEvents();
         setupMainWindowUi();
     }
 

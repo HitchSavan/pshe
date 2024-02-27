@@ -2,11 +2,11 @@ package user_client.gui;
 
 import javafx.application.Preloader;
 import javafx.application.Preloader.StateChangeNotification.Type;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -18,16 +18,15 @@ public class CustomPreloader extends Preloader {
         this.preloaderStage = primaryStage;
     
         VBox loading = new VBox(20);
-        loading.setMaxWidth(Region.USE_PREF_SIZE);
-        loading.setMaxHeight(Region.USE_PREF_SIZE);
+        loading.setAlignment(Pos.CENTER);
         loading.getChildren().add(new ProgressBar());
-        loading.getChildren().add(new Label("Please wait..."));
+        loading.getChildren().add(new Label("Launching app..."));
     
         BorderPane root = new BorderPane(loading);
         Scene scene = new Scene(root);
     
-        primaryStage.setWidth(800);
-        primaryStage.setHeight(600);
+        primaryStage.setWidth(200);
+        primaryStage.setHeight(150);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
