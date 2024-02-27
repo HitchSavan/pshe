@@ -86,14 +86,28 @@ public class PatcherWindow extends Application {
     TextField newProjectPathField;
     Button chooseNewProjectButton;
 
+    TextField projectRemotePathField;
+    Button chooseRemoteProjectButton;
+
+    TextField oldProjectRemotePathField;
+    Button chooseOldRemoteProjectButton;
+
+    TextField newProjectRemotePathField;
+    Button chooseNewRemoteProjectButton;
+
     JFileChooser fileChooser;
 
     CheckBox rememberPathsCheckbox;
     CheckBox replaceFilesCheckbox;
     CheckBox rememberAdminPathsCheckbox;
+    CheckBox remoteRememberPathsCheckbox;
+    CheckBox remoteReplaceFilesCheckbox;
+    CheckBox remoteRememberAdminPathsCheckbox;
 
     Button applyPatchButton;
     Button createPatchButton;
+    Button remoteApplyPatchButton;
+    Button remoteCreatePatchButton;
 
     Button adminLoginButton;
     Button historyLoginButton;
@@ -106,6 +120,8 @@ public class PatcherWindow extends Application {
 
     Label activeCourgetesApplyAmount;
     Label activeCourgetesGenAmount;
+    Label activeRemoteCourgetesApplyAmount;
+    Label activeRemoteCourgetesGenAmount;
     
     public static void runApp(String[] args) {
         System.setProperty("javafx.preloader", CustomPreloader.class.getCanonicalName());
@@ -285,8 +301,6 @@ public class PatcherWindow extends Application {
 
         projectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getString("projectPath"));
-        patchPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
-                .getJSONObject("patchingInfo").getString("patchPath"));
         rememberPaths = authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("rememberPaths");
         replaceFiles = authWindow.config.getJSONObject(RunCourgette.os)
@@ -296,41 +310,39 @@ public class PatcherWindow extends Application {
                 .getJSONObject("patchCreationInfo").getString("oldProjectPath"));
         newProjectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("newProjectPath"));
-        patchFolderPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
-                .getJSONObject("patchCreationInfo").getString("patchPath"));
 
         Label projectPathLabel = new Label("Path to project:");
         projectPathLabel.setPrefSize(105, 25);
-        projectPathField = new TextField(projectPath.toString());
-        projectPathField.setEditable(true);
-        chooseProjectButton = new Button("browse");
-        chooseProjectButton.setPrefSize(70, 0);
+        projectRemotePathField = new TextField(projectPath.toString());
+        projectRemotePathField.setEditable(true);
+        chooseRemoteProjectButton = new Button("browse");
+        chooseRemoteProjectButton.setPrefSize(70, 0);
 
         AnchorPane projectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(projectPathLabel, 5d);
-        AnchorPane.setLeftAnchor(projectPathField, 5d + projectPathLabel.getPrefWidth());
-        AnchorPane.setRightAnchor(projectPathField, 5d + chooseProjectButton.getPrefWidth());
-        AnchorPane.setRightAnchor(chooseProjectButton, 5d);
-        projectPathPanel.getChildren().addAll(projectPathLabel, projectPathField, chooseProjectButton);
+        AnchorPane.setLeftAnchor(projectRemotePathField, 5d + projectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(projectRemotePathField, 5d + chooseRemoteProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseRemoteProjectButton, 5d);
+        projectPathPanel.getChildren().addAll(projectPathLabel, projectRemotePathField, chooseRemoteProjectButton);
 
-        rememberPathsCheckbox = new CheckBox("Remember");
-        rememberPathsCheckbox.setSelected(rememberPaths);
-        replaceFilesCheckbox = new CheckBox("Replace old files");
-        replaceFilesCheckbox.setSelected(replaceFiles);
+        remoteRememberPathsCheckbox = new CheckBox("Remember");
+        remoteRememberPathsCheckbox.setSelected(rememberPaths);
+        remoteReplaceFilesCheckbox = new CheckBox("Replace old files");
+        remoteReplaceFilesCheckbox.setSelected(replaceFiles);
 
         VBox checkboxPanel = new VBox();
         checkboxPanel.setPadding(new Insets(5));
-        checkboxPanel.getChildren().addAll(rememberPathsCheckbox, replaceFilesCheckbox);
+        checkboxPanel.getChildren().addAll(remoteRememberPathsCheckbox, remoteReplaceFilesCheckbox);
 
-        applyPatchButton = new Button("Patch to latest version");
-        applyPatchButton.setPrefSize(150, 0);
+        remoteApplyPatchButton = new Button("Patch to latest version");
+        remoteApplyPatchButton.setPrefSize(150, 0);
 
-        activeCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeRemoteCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
         VBox tabContent = new VBox();
         tabContent.setAlignment(Pos.TOP_CENTER);
         tabContent.setPadding(new Insets(5));
-        tabContent.getChildren().addAll(projectPathPanel, checkboxPanel, applyPatchButton, activeCourgetesApplyAmount);
+        tabContent.getChildren().addAll(projectPathPanel, checkboxPanel, remoteApplyPatchButton, activeRemoteCourgetesApplyAmount);
 
         applyRemoteTab = new Tab();
         applyRemoteTab.setContent(tabContent);
@@ -428,50 +440,50 @@ public class PatcherWindow extends Application {
         
         Label oldProjectPathLabel = new Label("Path to old version:");
         oldProjectPathLabel.setPrefSize(135, 25);
-        oldProjectPathField = new TextField(oldProjectPath.toString());
-        oldProjectPathField.setEditable(true);
-        chooseOldProjectButton = new Button("browse");
-        chooseOldProjectButton.setPrefSize(70, 0);
+        oldProjectRemotePathField = new TextField(oldProjectPath.toString());
+        oldProjectRemotePathField.setEditable(true);
+        chooseOldRemoteProjectButton = new Button("browse");
+        chooseOldRemoteProjectButton.setPrefSize(70, 0);
 
         AnchorPane oldProjectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(oldProjectPathLabel, 5d);
-        AnchorPane.setLeftAnchor(oldProjectPathField, 5d + oldProjectPathLabel.getPrefWidth());
-        AnchorPane.setRightAnchor(oldProjectPathField, 5d + chooseOldProjectButton.getPrefWidth());
-        AnchorPane.setRightAnchor(chooseOldProjectButton, 5d);
-        oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectPathField, chooseOldProjectButton);
+        AnchorPane.setLeftAnchor(oldProjectRemotePathField, 5d + oldProjectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(oldProjectRemotePathField, 5d + chooseOldRemoteProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseOldRemoteProjectButton, 5d);
+        oldProjectPathPanel.getChildren().addAll(oldProjectPathLabel, oldProjectRemotePathField, chooseOldRemoteProjectButton);
 
         Label newProjectPathLabel = new Label("Path to new version:");
         newProjectPathLabel.setPrefSize(135, 25);
-        newProjectPathField = new TextField(newProjectPath.toString());
-        newProjectPathField.setEditable(true);
-        chooseNewProjectButton = new Button("browse");
-        chooseNewProjectButton.setPrefSize(70, 0);
+        newProjectRemotePathField = new TextField(newProjectPath.toString());
+        newProjectRemotePathField.setEditable(true);
+        chooseNewRemoteProjectButton = new Button("browse");
+        chooseNewRemoteProjectButton.setPrefSize(70, 0);
 
         AnchorPane newProjectPathPanel = new AnchorPane();
         AnchorPane.setLeftAnchor(newProjectPathLabel, 5d);
-        AnchorPane.setLeftAnchor(newProjectPathField, 5d + newProjectPathLabel.getPrefWidth());
-        AnchorPane.setRightAnchor(newProjectPathField, 5d + chooseNewProjectButton.getPrefWidth());
-        AnchorPane.setRightAnchor(chooseNewProjectButton, 5d);
-        newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectPathField, chooseNewProjectButton);
+        AnchorPane.setLeftAnchor(newProjectRemotePathField, 5d + newProjectPathLabel.getPrefWidth());
+        AnchorPane.setRightAnchor(newProjectRemotePathField, 5d + chooseNewRemoteProjectButton.getPrefWidth());
+        AnchorPane.setRightAnchor(chooseNewRemoteProjectButton, 5d);
+        newProjectPathPanel.getChildren().addAll(newProjectPathLabel, newProjectRemotePathField, chooseNewRemoteProjectButton);
 
-        rememberPathsCheckbox = new CheckBox("Remember");
-        rememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(RunCourgette.os)
+        remoteRememberPathsCheckbox = new CheckBox("Remember");
+        remoteRememberPathsCheckbox.setSelected(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("rememberPaths"));
 
         VBox checkboxPanel = new VBox();
         checkboxPanel.setPadding(new Insets(5));
-        checkboxPanel.getChildren().addAll(rememberPathsCheckbox);
+        checkboxPanel.getChildren().addAll(remoteRememberPathsCheckbox);
 
-        createPatchButton = new Button("Create patch");
-        createPatchButton.setPrefSize(110, 0);
+        remoteCreatePatchButton = new Button("Create patch");
+        remoteCreatePatchButton.setPrefSize(110, 0);
 
-        activeCourgetesGenAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeRemoteCourgetesGenAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
 
         adminTabContent = new VBox();
         adminTabContent.setAlignment(Pos.TOP_CENTER);
         adminTabContent.setPadding(new Insets(5));
         adminTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
-                checkboxPanel, createPatchButton, activeCourgetesGenAmount);
+                checkboxPanel, remoteCreatePatchButton, activeRemoteCourgetesGenAmount);
     }
 
     private void setupGenTabUi() {
