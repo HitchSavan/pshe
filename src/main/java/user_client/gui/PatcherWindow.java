@@ -293,9 +293,7 @@ public class PatcherWindow extends Application {
     }
 
     private void setupApplyRemoteTabUi() {
-
         // setupLoginUi(applyRemoteTab, );
-
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
@@ -596,7 +594,6 @@ public class PatcherWindow extends Application {
                     .getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
             authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchingInfo").put("replaceFiles", replaceFilesCheckbox.isSelected());
-
             authWindow.saveConfig();
 
             FileVisitor fileVisitor = new FileVisitor();
@@ -622,7 +619,6 @@ public class PatcherWindow extends Application {
             byte[] emptyData = {0};
     
             for (Path patchFile: patchFiles) {
-    
                 relativePatchPath = patchPath.relativize(patchFile);
                 newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
                         Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
@@ -645,7 +641,6 @@ public class PatcherWindow extends Application {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-    
                 Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount);
             }
         });
@@ -665,7 +660,6 @@ public class PatcherWindow extends Application {
                     .getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
             authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
-
             authWindow.saveConfig();
 
             FileVisitor fileVisitor = new FileVisitor(newProjectPath);
@@ -707,7 +701,6 @@ public class PatcherWindow extends Application {
         });
 
         authWindow.btnConnect.setOnAction(e -> {
-            
             authWindow.userLogin = authWindow.loginField.getText();
             authWindow.userPassword = authWindow.passField.getText();
 
@@ -716,11 +709,8 @@ public class PatcherWindow extends Application {
             }
             authWindow.config.getJSONObject("userInfo").put("login", authWindow.userLogin);
             authWindow.config.getJSONObject("userInfo").put("pass", authWindow.userPassword);
-
             authWindow.saveConfig();
-
             authWindow.curAccess = AuthWindow.ACCESS.ADMIN;
-            
             authWindow.hide();
             
             if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
@@ -736,7 +726,6 @@ public class PatcherWindow extends Application {
         Path newPath;
         Path patchFile;
         byte[] emptyData = {0};
-
         for (Path oldFile: oldFiles) {
 
             relativeOldPath = oldProjectPath.relativize(oldFile);
@@ -753,14 +742,12 @@ public class PatcherWindow extends Application {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-
             Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
         }
 
         Path relativeNewPath;
         Path oldPath;
         for (Path newFile: newFiles) {
-            
             relativeNewPath = newProjectPath.relativize(newFile);
             oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
             patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeNewPath.toString() + "_patch").normalize();
@@ -773,7 +760,6 @@ public class PatcherWindow extends Application {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-
                 Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
             }
         }

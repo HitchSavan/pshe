@@ -33,16 +33,16 @@
     },
     "windows 10": {
         "patchingInfo": {
-            "rememberPaths": false,
+            "rememberPaths": true,
             "replaceFiles": false,
-            "projectPath": "",
-            "patchPath": ""
+            "projectPath": "D:\\Doc\\!!Progs\\Java\\PSHE_user_client\\test files\\old",
+            "patchPath": "D:\\Doc\\!!Progs\\Java\\PSHE_user_client\\test files\\патч\\forward"
         },
         "patchCreationInfo": {
-            "rememberPaths": false,
-            "patchPath": "",
-            "newProjectPath": "",
-            "oldProjectPath": ""
+            "rememberPaths": true,
+            "patchPath": "D:\\Doc\\!!Progs\\Java\\PSHE_user_client\\test files\\патч",
+            "newProjectPath": "D:\\Doc\\!!Progs\\Java\\PSHE_user_client\\test files\\new",
+            "oldProjectPath": "D:\\Doc\\!!Progs\\Java\\PSHE_user_client\\test files\\old"
         }
     }
 }
