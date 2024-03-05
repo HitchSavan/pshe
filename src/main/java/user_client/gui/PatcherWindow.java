@@ -38,9 +38,9 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import patcher.files_utils.FileVisitor;
 import patcher.files_utils.UnpackResources;
-import patcher.patching_utils.Patcher;
 import patcher.patching_utils.RunCourgette;
-import patcher.patching_utils.Patch;
+import patcher.remote_api.entities.Patch;
+import user_client.utils.CourgetteHandler;
 
 public class PatcherWindow extends Application {
 
@@ -280,7 +280,7 @@ public class PatcherWindow extends Application {
         applyPatchButton = new Button("Patch");
         applyPatchButton.setPrefSize(60, 0);
 
-        activeCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeCourgetesApplyAmount = new Label("Active Courgette instances:\t" + CourgetteHandler.currentThreadsAmount());
 
         VBox tabContent = new VBox();
         tabContent.setAlignment(Pos.TOP_CENTER);
@@ -335,7 +335,7 @@ public class PatcherWindow extends Application {
         remoteApplyPatchButton = new Button("Patch to latest version");
         remoteApplyPatchButton.setPrefSize(150, 0);
 
-        activeRemoteCourgetesApplyAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeRemoteCourgetesApplyAmount = new Label("Active Courgette instances:\t" + CourgetteHandler.currentThreadsAmount());
 
         VBox tabContent = new VBox();
         tabContent.setAlignment(Pos.TOP_CENTER);
@@ -388,9 +388,9 @@ public class PatcherWindow extends Application {
 
         ObservableList<Patch> patches = FXCollections.observableArrayList();
 
-        for (String[] row: data) {
-            patches.add(new Patch(row[0], row[1], row[2], row[3]));
-        }
+        // for (String[] row: data) {
+        //     patches.add(new Patch(row[0], row[1], row[2], row[3]));
+        // }
 
         TableView<Patch> table = new TableView<>(patches);
 
@@ -475,7 +475,7 @@ public class PatcherWindow extends Application {
         remoteCreatePatchButton = new Button("Create patch");
         remoteCreatePatchButton.setPrefSize(110, 0);
 
-        activeRemoteCourgetesGenAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeRemoteCourgetesGenAmount = new Label("Active Courgette instances:\t" + CourgetteHandler.currentThreadsAmount());
 
         adminTabContent = new VBox();
         adminTabContent.setAlignment(Pos.TOP_CENTER);
@@ -538,7 +538,7 @@ public class PatcherWindow extends Application {
         createPatchButton = new Button("Create patch");
         createPatchButton.setPrefSize(110, 0);
 
-        activeCourgetesGenAmount = new Label("Active Courgette instances:\t" + RunCourgette.currentThreadsAmount());
+        activeCourgetesGenAmount = new Label("Active Courgette instances:\t" + CourgetteHandler.currentThreadsAmount());
 
         VBox genTabContent = new VBox();
         genTabContent.setAlignment(Pos.TOP_CENTER);
@@ -641,7 +641,7 @@ public class PatcherWindow extends Application {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                Patcher.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount);
+                new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount);
             }
         });
         createPatchButton.setOnAction(e -> {
@@ -742,7 +742,7 @@ public class PatcherWindow extends Application {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            Patcher.generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
+            new CourgetteHandler().generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
         }
 
         Path relativeNewPath;
@@ -760,7 +760,7 @@ public class PatcherWindow extends Application {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                Patcher.generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
+                new CourgetteHandler().generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
             }
         }
     }
