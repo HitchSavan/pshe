@@ -2,7 +2,7 @@
     "userInfo": {
         "pass": "parol",
         "login": "pipisi",
-        "url": "http://tarkov.deadlauncher.fun/api/v1"
+        "url": "http://127.0.0.1:5000"
     },
     "linux": {
         "patchingInfo": {

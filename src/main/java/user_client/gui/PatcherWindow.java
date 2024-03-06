@@ -367,15 +367,13 @@ public class PatcherWindow extends Application {
             versionsHistory = Versions.getHistory();
 
             if (versionsHistory.getBoolean("success")) {
-
+                versionsHistory.getJSONArray("versions").forEach(v -> {
+                    versions.add(new TableItemVersion(new Version((JSONObject)v)));
+                });
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        // for (String[] row: data) {
-        //     versions.add(new TableItemVersion(row[0], row[1], row[2], row[3]));
-        // }
 
         TableView<TableItemVersion> table = new TableView<>(versions);
 
