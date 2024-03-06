@@ -1,7 +1,8 @@
 {
     "userInfo": {
         "pass": "parol",
-        "login": "pipisi"
+        "login": "pipisi",
+        "url": "http://tarkov.deadlauncher.fun/api/v1"
     },
     "linux": {
         "patchingInfo": {

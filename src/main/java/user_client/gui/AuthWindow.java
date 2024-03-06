@@ -38,6 +38,7 @@ public class AuthWindow extends Stage {
 
     String userLogin = "";
     String userPassword = "";
+    String urlApi = "";
 
     VBox startPanel;
 
@@ -46,6 +47,9 @@ public class AuthWindow extends Stage {
 
     Label passLabel;
     TextField passField;
+
+    Label urlLabel;
+    TextField urlField;
     
     Button btnConnect;
     
@@ -69,7 +73,7 @@ public class AuthWindow extends Stage {
                 e.printStackTrace();
             }
         } else {
-            config.put("userInfo", new JSONObject().put("login", "").put("pass", ""));
+            config.put("userInfo", new JSONObject().put("login", "").put("pass", "").put("url", ""));
         }
         
         if (!config.has(RunCourgette.os)) {
@@ -91,6 +95,7 @@ public class AuthWindow extends Stage {
 
         userLogin = config.getJSONObject("userInfo").getString("login");
         userPassword = config.getJSONObject("userInfo").getString("pass");
+        urlApi = config.getJSONObject("userInfo").getString("url");
 
         loginLabel = new Label("Login");
         loginLabel.setPrefSize(75, 25);
@@ -108,6 +113,14 @@ public class AuthWindow extends Stage {
         HBox passPanel = new HBox();
         passPanel.getChildren().addAll(passLabel, passField);
 
+        urlLabel = new Label("URL");
+        urlLabel.setPrefSize(75, 25);
+        urlField = new TextField(urlApi);
+        urlField.setEditable(true);
+
+        HBox urlPanel = new HBox();
+        urlPanel.getChildren().addAll(urlLabel, urlField);
+
         btnConnect = new Button("Connect");
         btnConnect.setPrefSize(75, 25);
 
@@ -116,7 +129,7 @@ public class AuthWindow extends Stage {
         startPanel.getChildren().addAll(btnConnect);
 
         VBox fieldsPanel = new VBox();
-        fieldsPanel.getChildren().addAll(loginPanel, passPanel);
+        fieldsPanel.getChildren().addAll(loginPanel, passPanel, urlPanel);
 
         BorderPane primaryPane = new BorderPane();
         primaryPane.setPadding(new Insets(5));
@@ -148,14 +161,17 @@ public class AuthWindow extends Stage {
             }
             config.getJSONObject("userInfo").put("login", userLogin);
             config.getJSONObject("userInfo").put("pass", userPassword);
+            config.getJSONObject("userInfo").put("url", urlApi);
 
             saveConfig();
-
-            curAccess = ACCESS.ADMIN;
-            
+            updateAccessRights();
             hide();
-            // TODO: ADD ADMIN VERIFICATION
         });
+    }
+
+    public void updateAccessRights() {
+        // TODO: ADD ADMIN VERIFICATION
+        curAccess = ACCESS.ADMIN;
     }
 
     public void saveConfig() {

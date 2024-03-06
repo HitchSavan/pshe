@@ -39,8 +39,11 @@ import javafx.stage.Stage;
 import patcher.files_utils.FileVisitor;
 import patcher.files_utils.UnpackResources;
 import patcher.patching_utils.RunCourgette;
-import patcher.remote_api.entities.Patch;
+import patcher.remote_api.endpoints.Versions;
+import patcher.remote_api.entities.Version;
+import patcher.remote_api.utils.Connector;
 import user_client.utils.CourgetteHandler;
+import user_client.utils.TableItemVersion;
 
 public class PatcherWindow extends Application {
 
@@ -65,10 +68,11 @@ public class PatcherWindow extends Application {
     boolean isFileMode = true;
 
     HashMap<TabPane, HashMap<String, Integer>> tabsNames = new HashMap<>();
+    VBox applyPatchTabContent;
     VBox adminTabContent;
     HBox historyTabContent;
     
-    Patch checkoutPatch = null;
+    Version checkoutVersion = null;
     Button checkoutButton;
 
     TextField patchPathField;
@@ -110,6 +114,7 @@ public class PatcherWindow extends Application {
     Button remoteCreatePatchButton;
 
     Button adminLoginButton;
+    Button applyPatchLoginButton;
     Button historyLoginButton;
 
     Path projectPath;
@@ -136,7 +141,6 @@ public class PatcherWindow extends Application {
         Platform.runLater(() -> {
             authWindow = new AuthWindow();
             setupFileUi();
-            setupRemoteUi();
             setupEvents();
         });
     }
@@ -154,17 +158,27 @@ public class PatcherWindow extends Application {
         fileTabs = new TabPane();
         addTab(fileTabs, "Patching", applyTab);
         addTab(fileTabs, "Generate", genTab);
+        
+        applyRemoteTab = new Tab();
+        applyPatchLoginButton = new Button();
+        setupLoginUi(applyRemoteTab, applyPatchLoginButton);
+        historyTab = new Tab();
+        historyLoginButton = new Button();
+        setupLoginUi(historyTab, historyLoginButton);
+        adminTab = new Tab();
+        adminLoginButton = new Button();
+        setupLoginUi(adminTab, adminLoginButton);
+        
+        remoteTabs = new TabPane();
+        addTab(remoteTabs, "Patching", applyRemoteTab);
+        addTab(remoteTabs, "History", historyTab);
+        addTab(remoteTabs, "Generate", adminTab);
     }
 
     private void setupRemoteUi() {
         setupApplyRemoteTabUi();
         setupHistoryTabUi();
         setupAdminTabUi();
-        
-        remoteTabs = new TabPane();
-        addTab(remoteTabs, "Patching", applyRemoteTab);
-        addTab(remoteTabs, "History", historyTab);
-        addTab(remoteTabs, "Generate", adminTab);
     }
 
     private void setupMainWindowUi() {
@@ -293,7 +307,6 @@ public class PatcherWindow extends Application {
     }
 
     private void setupApplyRemoteTabUi() {
-        // setupLoginUi(applyRemoteTab, );
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
@@ -337,88 +350,60 @@ public class PatcherWindow extends Application {
 
         activeRemoteCourgetesApplyAmount = new Label("Active Courgette instances:\t" + CourgetteHandler.currentThreadsAmount());
 
-        VBox tabContent = new VBox();
-        tabContent.setAlignment(Pos.TOP_CENTER);
-        tabContent.setPadding(new Insets(5));
-        tabContent.getChildren().addAll(projectPathPanel, checkboxPanel, remoteApplyPatchButton, activeRemoteCourgetesApplyAmount);
-
-        applyRemoteTab = new Tab();
-        applyRemoteTab.setContent(tabContent);
+        applyPatchTabContent = new VBox();
+        applyPatchTabContent.setAlignment(Pos.TOP_CENTER);
+        applyPatchTabContent.setPadding(new Insets(5));
+        applyPatchTabContent.getChildren().addAll(projectPathPanel, checkboxPanel, remoteApplyPatchButton, activeRemoteCourgetesApplyAmount);
     }
 
     private void setupHistoryTabUi() {
-        historyTab = new Tab();
-        historyLoginButton = new Button();
-        setupLoginUi(historyTab, historyLoginButton);
-
         // TODO: PATCH TABLE HISTORY PLACEHOLDER
-        String[] columnNames = {"Patch date", "Version from", "Version to", "Message"};
-        String[][] data = {
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-            {"01-12-2023", "31541", "31542", "last patch"},
-            {"30-10-2023", "26451", "31541", "second patch"},
-            {"05-02-2022", "5655", "26451", "first patch"},
-        };
+        String[] columnNames = {"Version", "Date", "Files amount", "Total size"};
 
-        ObservableList<Patch> patches = FXCollections.observableArrayList();
+        ObservableList<TableItemVersion> versions = FXCollections.observableArrayList();
+
+        JSONObject versionsHistory = null;
+        try {
+            versionsHistory = Versions.getHistory();
+
+            if (versionsHistory.getBoolean("success")) {
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         // for (String[] row: data) {
-        //     patches.add(new Patch(row[0], row[1], row[2], row[3]));
+        //     versions.add(new TableItemVersion(row[0], row[1], row[2], row[3]));
         // }
 
-        TableView<Patch> table = new TableView<>(patches);
+        TableView<TableItemVersion> table = new TableView<>(versions);
 
-        TableColumn<Patch, String> dateColumn = new TableColumn<>(columnNames[0]);
-        dateColumn.setCellValueFactory(new PropertyValueFactory<>("patchDate"));
+        TableColumn<TableItemVersion, String> dateColumn = new TableColumn<>(columnNames[0]);
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("versionString"));
         table.getColumns().add(dateColumn);
 
-        TableColumn<Patch, String> versionFromColumn = new TableColumn<>(columnNames[1]);
-        versionFromColumn.setCellValueFactory(new PropertyValueFactory<>("versionFrom"));
+        TableColumn<TableItemVersion, String> versionFromColumn = new TableColumn<>(columnNames[1]);
+        versionFromColumn.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
         table.getColumns().add(versionFromColumn);
 
-        TableColumn<Patch, String> versionToColumn = new TableColumn<>(columnNames[2]);
-        versionToColumn.setCellValueFactory(new PropertyValueFactory<>("versionTo"));
+        TableColumn<TableItemVersion, String> versionToColumn = new TableColumn<>(columnNames[2]);
+        versionToColumn.setCellValueFactory(new PropertyValueFactory<>("filesCount"));
         table.getColumns().add(versionToColumn);
 
-        TableColumn<Patch, String> messageColumn = new TableColumn<>(columnNames[3]);
-        messageColumn.setCellValueFactory(new PropertyValueFactory<>("message"));
+        TableColumn<TableItemVersion, String> messageColumn = new TableColumn<>(columnNames[3]);
+        messageColumn.setCellValueFactory(new PropertyValueFactory<>("totalSize"));
         table.getColumns().add(messageColumn);
 
         checkoutButton = new Button("Checkout");
         checkoutButton.setDisable(true);
 
-        TableView.TableViewSelectionModel<Patch> selectionModel = table.getSelectionModel();
-        selectionModel.selectedItemProperty().addListener(new ChangeListener<Patch>() {
+        TableView.TableViewSelectionModel<TableItemVersion> selectionModel = table.getSelectionModel();
+        selectionModel.selectedItemProperty().addListener(new ChangeListener<TableItemVersion>() {
             @Override
-            public void changed(ObservableValue<? extends Patch> val, Patch oldVal, Patch newVal) {
+            public void changed(ObservableValue<? extends TableItemVersion> val, TableItemVersion oldVal, TableItemVersion newVal) {
                 if (newVal != null) {
-                    checkoutPatch = newVal;
+                    checkoutVersion = newVal.getVersion();
                     checkoutButton.setDisable(false);
                 }
             }
@@ -432,10 +417,6 @@ public class PatcherWindow extends Application {
     }
 
     private void setupAdminTabUi() {
-        adminTab = new Tab();
-        adminLoginButton = new Button();
-        setupLoginUi(adminTab, adminLoginButton);
-        
         Label oldProjectPathLabel = new Label("Path to old version:");
         oldProjectPathLabel.setPrefSize(135, 25);
         oldProjectRemotePathField = new TextField(oldProjectPath.toString());
@@ -677,6 +658,12 @@ public class PatcherWindow extends Application {
             generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
         });
 
+        applyPatchLoginButton.setOnAction(e -> {
+            if (authWindow.isShowing())
+                authWindow.hide();
+            else
+                authWindow.show();
+        });
         adminLoginButton.setOnAction(e -> {
             if (authWindow.isShowing())
                 authWindow.hide();
@@ -690,32 +677,42 @@ public class PatcherWindow extends Application {
                 authWindow.show();
         });
 
-        checkoutButton.setOnAction(e -> {
-            if (checkoutPatch != null) {
-                // TODO: CHECKOUT PLACEHOLDER
-                System.out.print("Checkout to version ");
-                System.out.println(checkoutPatch.getVersionTo());
-            } else {
-                System.out.println("No version selected");
-            }
-        });
-
         authWindow.btnConnect.setOnAction(e -> {
             authWindow.userLogin = authWindow.loginField.getText();
             authWindow.userPassword = authWindow.passField.getText();
+            authWindow.urlApi = authWindow.urlField.getText();
 
             if (!authWindow.config.has("userInfo")) {
                 authWindow.config.put("userInfo", new JSONObject());
             }
             authWindow.config.getJSONObject("userInfo").put("login", authWindow.userLogin);
             authWindow.config.getJSONObject("userInfo").put("pass", authWindow.userPassword);
+            authWindow.config.getJSONObject("userInfo").put("url", authWindow.urlApi);
             authWindow.saveConfig();
-            authWindow.curAccess = AuthWindow.ACCESS.ADMIN;
+            authWindow.updateAccessRights();
             authWindow.hide();
             
             if (authWindow.curAccess == AuthWindow.ACCESS.ADMIN) {
+                Connector.setBaseUrl(authWindow.urlApi);
+
+                setupRemoteUi();
+                setupRemoteEvents();
+
                 remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("Generate")).setContent(adminTabContent);
                 remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("History")).setContent(historyTabContent);
+                remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("Patching")).setContent(applyPatchTabContent);
+            }
+        });
+    }
+
+    private void setupRemoteEvents() {
+        checkoutButton.setOnAction(e -> {
+            if (checkoutVersion != null) {
+                // TODO: CHECKOUT PLACEHOLDER
+                System.out.print("Checkout to version ");
+                System.out.println(checkoutVersion.getVersionString());
+            } else {
+                System.out.println("No version selected");
             }
         });
     }
