@@ -713,9 +713,49 @@ public class PatcherWindow extends Application {
                 System.out.println("No version selected");
             }
         });
+
+        remoteCreatePatchButton.setOnAction(e -> {
+            oldProjectPath = Paths.get(oldProjectPathField.getText());
+            newProjectPath = Paths.get(newProjectPathField.getText());
+            Path patchFolderPath = Paths.get("/tmp_patch");
+
+            if (!authWindow.config.getJSONObject(RunCourgette.os).has("patchCreationInfo")) {
+                authWindow.config.getJSONObject(RunCourgette.os).put("patchCreationInfo", new JSONObject());
+            }
+            authWindow.config.getJSONObject(RunCourgette.os)
+                    .getJSONObject("patchCreationInfo").put("oldProjectPath", oldProjectPath.toString());
+            authWindow.config.getJSONObject(RunCourgette.os)
+                    .getJSONObject("patchCreationInfo").put("newProjectPath", newProjectPath.toString());
+            authWindow.config.getJSONObject(RunCourgette.os)
+                    .getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
+            authWindow.saveConfig();
+
+            FileVisitor fileVisitor = new FileVisitor(newProjectPath);
+
+            ArrayList<Path> oldFiles = new ArrayList<>();
+            ArrayList<Path> newFiles = new ArrayList<>();
+
+            fileVisitor.walkFileTree(oldProjectPath);
+            oldFiles = new ArrayList<>(fileVisitor.allFiles);
+
+            fileVisitor.walkFileTree(newProjectPath);
+            newFiles = new ArrayList<>(fileVisitor.allFiles);
+            
+            generatePatch(patchFolderPath, oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
+            generatePatch(patchFolderPath, newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
+
+            
+
+            UnpackResources.deleteDirectory(patchFolderPath.toString());
+        });
     }
 
     private void generatePatch(Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles,
+            ArrayList<Path> newFiles, String patchSubfolder, Label updatingComponent) {
+        generatePatch(patchFolderPath, oldProjectPath, newProjectPath, oldFiles, newFiles, patchSubfolder, updatingComponent);
+    }
+
+    private void generatePatch(Path patchFolderPath, Path oldProjectPath, Path newProjectPath, ArrayList<Path> oldFiles,
             ArrayList<Path> newFiles, String patchSubfolder, Label updatingComponent) {
         Path relativeOldPath;
         Path newPath;
