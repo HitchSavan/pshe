@@ -717,7 +717,7 @@ public class PatcherWindow extends Application {
         remoteCreatePatchButton.setOnAction(e -> {
             oldProjectPath = Paths.get(oldProjectPathField.getText());
             newProjectPath = Paths.get(newProjectPathField.getText());
-            Path patchFolderPath = Paths.get("/tmp_patch");
+            Path patchFolderPath = Paths.get(newProjectPath.getParent().toString(), "/tmp_patch");
 
             if (!authWindow.config.getJSONObject(RunCourgette.os).has("patchCreationInfo")) {
                 authWindow.config.getJSONObject(RunCourgette.os).put("patchCreationInfo", new JSONObject());
@@ -743,10 +743,6 @@ public class PatcherWindow extends Application {
             
             generatePatch(patchFolderPath, oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(patchFolderPath, newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
-
-            
-
-            UnpackResources.deleteDirectory(patchFolderPath.toString());
         });
     }
 
