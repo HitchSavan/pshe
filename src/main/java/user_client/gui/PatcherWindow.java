@@ -13,6 +13,7 @@ import java.util.HashMap;
 
 import javax.swing.JFileChooser;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javafx.application.Application;
@@ -21,6 +22,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -43,7 +45,7 @@ import patcher.remote_api.endpoints.Versions;
 import patcher.remote_api.entities.Version;
 import patcher.remote_api.utils.Connector;
 import user_client.utils.CourgetteHandler;
-import user_client.utils.TableItemVersion;
+import user_client.utils.HistoryTableItem;
 
 public class PatcherWindow extends Application {
 
@@ -65,7 +67,7 @@ public class PatcherWindow extends Application {
     Tab adminTab;
 
     Button modeSwitchButton;
-    boolean isFileMode = true;
+    boolean isFileMode;
 
     HashMap<TabPane, HashMap<String, Integer>> tabsNames = new HashMap<>();
     VBox applyPatchTabContent;
@@ -184,11 +186,9 @@ public class PatcherWindow extends Application {
     private void setupMainWindowUi() {
         this.primaryStage.setMinWidth(300);
         this.primaryStage.setMinHeight(defaultWindowHeight);
-        // this.primaryStage.setMaxHeight(defaultWindowHeight);
 
         this.primaryStage.setWidth(defaultWindowWidth);
         this.primaryStage.setHeight(defaultWindowHeight);
-        this.primaryStage.setTitle(windowName + " - FILE MODE");
 
         VBox mainPane = new VBox();
         VBox.setVgrow(fileTabs, Priority.ALWAYS);
@@ -198,26 +198,25 @@ public class PatcherWindow extends Application {
         mainPane.setPadding(new Insets(0, 0, 5, 0));
         mainPane.setAlignment(Pos.CENTER);
 
+        if (!authWindow.config.has("defaultFilemode")) {
+            authWindow.config.put("defaultFilemode", true);
+        }
+
+        isFileMode = authWindow.config.getBoolean("defaultFilemode");
+        
         mainPane.getChildren().addAll(fileTabs, modeSwitchButton);
+
+        switchMode(mainPane, !isFileMode);
 
         this.primaryScene = new Scene(mainPane);
         this.primaryStage.setScene(primaryScene);
 
         modeSwitchButton.setOnAction(e -> {
-            if (isFileMode) {
-                mainPane.getChildren().set(0, remoteTabs);
-                modeSwitchButton.setText("Change to file mode");
-                this.primaryStage.setTitle(windowName + " - REMOTE MODE");
-                isFileMode = false;
-            } else {
-                mainPane.getChildren().set(0, fileTabs);
-                modeSwitchButton.setText("Change to remote mode");
-                this.primaryStage.setTitle(windowName + " - FILE MODE");
-                isFileMode = true;
-            }
+            switchMode(mainPane, isFileMode);
         });
         
         this.primaryStage.setOnCloseRequest(e -> {
+            authWindow.saveConfig();
             UnpackResources.deleteDirectory("tmp");
             System.exit(0);
         });
@@ -308,14 +307,11 @@ public class PatcherWindow extends Application {
 
     private void setupApplyRemoteTabUi() {
         boolean rememberPaths = false;
-        boolean replaceFiles = false;
 
         projectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getString("projectPath"));
         rememberPaths = authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchingInfo").getBoolean("rememberPaths");
-        replaceFiles = authWindow.config.getJSONObject(RunCourgette.os)
-                .getJSONObject("patchingInfo").getBoolean("replaceFiles");
 
         oldProjectPath = Paths.get(authWindow.config.getJSONObject(RunCourgette.os)
                 .getJSONObject("patchCreationInfo").getString("oldProjectPath"));
@@ -338,12 +334,10 @@ public class PatcherWindow extends Application {
 
         remoteRememberPathsCheckbox = new CheckBox("Remember");
         remoteRememberPathsCheckbox.setSelected(rememberPaths);
-        remoteReplaceFilesCheckbox = new CheckBox("Replace old files");
-        remoteReplaceFilesCheckbox.setSelected(replaceFiles);
 
         VBox checkboxPanel = new VBox();
         checkboxPanel.setPadding(new Insets(5));
-        checkboxPanel.getChildren().addAll(remoteRememberPathsCheckbox, remoteReplaceFilesCheckbox);
+        checkboxPanel.getChildren().addAll(remoteRememberPathsCheckbox);
 
         remoteApplyPatchButton = new Button("Patch to latest version");
         remoteApplyPatchButton.setPrefSize(150, 0);
@@ -360,46 +354,34 @@ public class PatcherWindow extends Application {
         // TODO: PATCH TABLE HISTORY PLACEHOLDER
         String[] columnNames = {"Version", "Date", "Files amount", "Total size"};
 
-        ObservableList<TableItemVersion> versions = FXCollections.observableArrayList();
+        ObservableList<HistoryTableItem> versions = FXCollections.observableArrayList();
 
-        JSONObject versionsHistory = null;
-        try {
-            versionsHistory = Versions.getHistory();
+        TableView<HistoryTableItem> table = new TableView<>(versions);
 
-            if (versionsHistory.getBoolean("success")) {
-                versionsHistory.getJSONArray("versions").forEach(v -> {
-                    versions.add(new TableItemVersion(new Version((JSONObject)v)));
-                });
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        TableColumn<HistoryTableItem, String> versionColumn = new TableColumn<>(columnNames[0]);
+        versionColumn.setCellValueFactory(new PropertyValueFactory<>("versionString"));
+        table.getColumns().add(versionColumn);
+        versionColumn.setMinWidth(90);
 
-        TableView<TableItemVersion> table = new TableView<>(versions);
-
-        TableColumn<TableItemVersion, String> dateColumn = new TableColumn<>(columnNames[0]);
-        dateColumn.setCellValueFactory(new PropertyValueFactory<>("versionString"));
+        TableColumn<HistoryTableItem, String> dateColumn = new TableColumn<>(columnNames[1]);
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
         table.getColumns().add(dateColumn);
 
-        TableColumn<TableItemVersion, String> versionFromColumn = new TableColumn<>(columnNames[1]);
-        versionFromColumn.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
-        table.getColumns().add(versionFromColumn);
+        TableColumn<HistoryTableItem, String> filesColumn = new TableColumn<>(columnNames[2]);
+        filesColumn.setCellValueFactory(new PropertyValueFactory<>("filesCount"));
+        table.getColumns().add(filesColumn);
 
-        TableColumn<TableItemVersion, String> versionToColumn = new TableColumn<>(columnNames[2]);
-        versionToColumn.setCellValueFactory(new PropertyValueFactory<>("filesCount"));
-        table.getColumns().add(versionToColumn);
-
-        TableColumn<TableItemVersion, String> messageColumn = new TableColumn<>(columnNames[3]);
-        messageColumn.setCellValueFactory(new PropertyValueFactory<>("totalSize"));
-        table.getColumns().add(messageColumn);
+        TableColumn<HistoryTableItem, String> sizeColumn = new TableColumn<>(columnNames[3]);
+        sizeColumn.setCellValueFactory(new PropertyValueFactory<>("totalSize"));
+        table.getColumns().add(sizeColumn);
 
         checkoutButton = new Button("Checkout");
         checkoutButton.setDisable(true);
 
-        TableView.TableViewSelectionModel<TableItemVersion> selectionModel = table.getSelectionModel();
-        selectionModel.selectedItemProperty().addListener(new ChangeListener<TableItemVersion>() {
+        TableView.TableViewSelectionModel<HistoryTableItem> selectionModel = table.getSelectionModel();
+        selectionModel.selectedItemProperty().addListener(new ChangeListener<HistoryTableItem>() {
             @Override
-            public void changed(ObservableValue<? extends TableItemVersion> val, TableItemVersion oldVal, TableItemVersion newVal) {
+            public void changed(ObservableValue<? extends HistoryTableItem> val, HistoryTableItem oldVal, HistoryTableItem newVal) {
                 if (newVal != null) {
                     checkoutVersion = newVal.getVersion();
                     checkoutButton.setDisable(false);
@@ -412,6 +394,28 @@ public class PatcherWindow extends Application {
         historyTabContent.setAlignment(Pos.CENTER_LEFT);
         historyTabContent.setPadding(new Insets(5));
         historyTabContent.getChildren().addAll(table, checkoutButton);
+
+        Task<Void> task = new Task<>() {
+            @Override public Void call() {
+                JSONObject versionsHistory = null;
+                try {
+                    versionsHistory = Versions.getHistory();
+    
+                    if (versionsHistory.getBoolean("success")) {
+                        versionsHistory.getJSONArray("versions").forEach(v -> {
+                            versions.add(new HistoryTableItem(new Version(((JSONObject)v).put("files", new JSONArray()))));
+                        });
+
+                        table.setItems(versions);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        };
+
+        new Thread(task).start();
     }
 
     private void setupAdminTabUi() {
@@ -620,7 +624,8 @@ public class PatcherWindow extends Application {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(), replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount);
+                new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
+                        replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount, isFileMode);
             }
         });
         createPatchButton.setOnAction(e -> {
@@ -714,6 +719,73 @@ public class PatcherWindow extends Application {
             }
         });
 
+        remoteApplyPatchButton.setOnAction(e -> {
+            projectPath = Paths.get(projectPathField.getText());
+            Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
+            Path tmpPatchPath = Paths.get(projectPath.getParent().toString(), "patch_tmp", projectPath.getFileName().toString());
+
+            if (!authWindow.config.getJSONObject(RunCourgette.os).has("patchingInfo")) {
+                authWindow.config.getJSONObject(RunCourgette.os).put("patchingInfo", new JSONObject());
+            }
+            authWindow.config.getJSONObject(RunCourgette.os)
+                    .getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
+            authWindow.config.getJSONObject(RunCourgette.os)
+                    .getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
+            authWindow.saveConfig();
+
+            // TODO: implement project config
+            // TODO: download patch sequences from current version to latest
+
+            FileVisitor fileVisitor = new FileVisitor();
+
+            ArrayList<Path> oldFiles = new ArrayList<>();
+            ArrayList<Path> patchFiles = new ArrayList<>();
+
+            try {
+                Files.walkFileTree(projectPath, fileVisitor);
+                oldFiles = new ArrayList<>(fileVisitor.allFiles);
+                fileVisitor.allFiles.clear();
+
+                Files.walkFileTree(tmpPatchPath, fileVisitor);
+                patchFiles = new ArrayList<>(fileVisitor.allFiles);
+                fileVisitor.allFiles.clear();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
+            Path relativePatchPath;
+            Path newPath;
+            Path oldPath;
+            byte[] emptyData = {0};
+    
+            for (Path patchFile: patchFiles) {
+                relativePatchPath = tmpPatchPath.relativize(patchFile);
+                newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
+                        Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
+                                tmpProjectPath.getFileName().toString()).toString() :
+                        relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+                oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
+                        relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+
+                if (!oldFiles.contains(oldPath)) {
+                    try {
+                        Files.createFile(oldPath);
+                        Files.write(oldPath, emptyData);
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+    
+                try {
+                    Files.createDirectories(newPath.getParent());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
+                        replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount, isFileMode);
+            }
+        });
+
         remoteCreatePatchButton.setOnAction(e -> {
             oldProjectPath = Paths.get(oldProjectPathField.getText());
             newProjectPath = Paths.get(newProjectPathField.getText());
@@ -743,6 +815,9 @@ public class PatcherWindow extends Application {
             
             generatePatch(patchFolderPath, oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(patchFolderPath, newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
+
+            // TODO: detete folder after successful upload
+            UnpackResources.deleteDirectory(patchFolderPath);
         });
     }
 
@@ -758,7 +833,6 @@ public class PatcherWindow extends Application {
         Path patchFile;
         byte[] emptyData = {0};
         for (Path oldFile: oldFiles) {
-
             relativeOldPath = oldProjectPath.relativize(oldFile);
             newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
             patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder,
@@ -773,7 +847,8 @@ public class PatcherWindow extends Application {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            new CourgetteHandler().generatePatch(oldFile.toString(), newPath.toString(), patchFile.toString(), updatingComponent);
+            new CourgetteHandler().generatePatch(oldFile.toString(), newPath.toString(),
+                    patchFile.toString(), updatingComponent, isFileMode);
         }
 
         Path relativeNewPath;
@@ -791,7 +866,8 @@ public class PatcherWindow extends Application {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                new CourgetteHandler().generatePatch(oldPath.toString(), newFile.toString(), patchFile.toString(), updatingComponent);
+                new CourgetteHandler().generatePatch(oldPath.toString(), newFile.toString(),
+                        patchFile.toString(),updatingComponent, isFileMode);
             }
         }
     }
@@ -811,5 +887,20 @@ public class PatcherWindow extends Application {
            File file = fileChooser.getSelectedFile();
            field.setText(file.getAbsolutePath());
         }
+    }
+
+    private void switchMode(VBox pane, boolean isFileMode) {
+        if (isFileMode) {
+            pane.getChildren().set(0, remoteTabs);
+            modeSwitchButton.setText("Change to file mode");
+            this.primaryStage.setTitle(windowName + " - REMOTE MODE");
+            this.isFileMode = false;
+        } else {
+            pane.getChildren().set(0, fileTabs);
+            modeSwitchButton.setText("Change to remote mode");
+            this.primaryStage.setTitle(windowName + " - FILE MODE");
+            this.isFileMode = true;
+        }
+        authWindow.config.put("defaultFilemode", this.isFileMode);
     }
 }

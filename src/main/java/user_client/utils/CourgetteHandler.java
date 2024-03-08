@@ -11,6 +11,7 @@ public class CourgetteHandler extends Thread {
     private String patchFile;
     private boolean replaceFiles;
     private boolean generate;
+    private boolean isFileMode;
     
     public static int MAX_THREADS_AMOUNT = 10;
     private static int currentThreadsAmount = 0;
@@ -25,12 +26,13 @@ public class CourgetteHandler extends Thread {
         --currentThreadsAmount;
     }
 
-    private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles, Label updatingComponent) {
+    private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles, Label updatingComponent, boolean isFileMode) {
         this.updatingComponent = updatingComponent;
         this.oldFile = oldFile;
         this.newPath = newPath;
         this.patchFile = patchFile;
         this.replaceFiles = replaceFiles;
+        this.isFileMode = isFileMode;
     }
 
     public static void updateComponent(Label updatingComponent) {
@@ -41,14 +43,14 @@ public class CourgetteHandler extends Thread {
         }
     }
     
-    public void generatePatch(String oldFile, String newPath, String patchFile, Label updatingComponent) {
-        init(oldFile, newPath, patchFile, false, updatingComponent);
+    public void generatePatch(String oldFile, String newPath, String patchFile, Label updatingComponent, boolean isFileMode) {
+        init(oldFile, newPath, patchFile, false, updatingComponent, isFileMode);
         generate = true;
         start();
     }
     
-    public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles, Label updatingComponent) {
-        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent);
+    public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles, Label updatingComponent, boolean isFileMode) {
+        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, isFileMode);
         generate = false;
         start();
     }
