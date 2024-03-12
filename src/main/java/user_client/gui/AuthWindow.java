@@ -19,6 +19,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import patcher.data_utils.DataEncoder;
 import patcher.patching_utils.RunCourgette;
 
 public class AuthWindow extends Stage {
@@ -67,7 +68,7 @@ public class AuthWindow extends Stage {
             File file = new File("config.json");
             String content;
             try {
-                content = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                content = DataEncoder.toString(Files.readAllBytes(Paths.get(file.toURI())));
                 config = new JSONObject(content);
             } catch (IOException e) {
                 e.printStackTrace();

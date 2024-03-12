@@ -3,17 +3,22 @@ package user_client.gui;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.JFileChooser;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import javafx.application.Application;
@@ -29,7 +34,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -37,15 +44,20 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import patcher.files_utils.FileVisitor;
 import patcher.files_utils.UnpackResources;
 import patcher.patching_utils.RunCourgette;
-import patcher.remote_api.endpoints.Versions;
-import patcher.remote_api.entities.Version;
+import patcher.remote_api.endpoints.VersionsEndpoint;
+import patcher.remote_api.entities.VersionEntity;
 import patcher.remote_api.utils.Connector;
 import user_client.utils.CourgetteHandler;
 import user_client.utils.HistoryTableItem;
+import user_client.utils.SaveResponse;
 
 public class PatcherWindow extends Application {
 
@@ -74,7 +86,8 @@ public class PatcherWindow extends Application {
     VBox adminTabContent;
     HBox historyTabContent;
     
-    Version checkoutVersion = null;
+    VersionEntity checkoutVersion = null;
+    VersionEntity rootVersion = null;
     Button checkoutButton;
 
     TextField patchPathField;
@@ -350,6 +363,35 @@ public class PatcherWindow extends Application {
         applyPatchTabContent.getChildren().addAll(projectPathPanel, checkboxPanel, remoteApplyPatchButton, activeRemoteCourgetesApplyAmount);
     }
 
+    private void customiseFactory(TableColumn<HistoryTableItem, Object> columnCel) {
+        columnCel.setCellFactory(column -> {
+            return new TableCell<HistoryTableItem, Object>() {
+                @Override
+                protected void updateItem(Object item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    if (item == null || empty) {
+                        setText(null);
+                        setStyle("");
+                    } else {
+                        String strItem = item.toString();
+                        setText(strItem);
+                        HistoryTableItem tableItem = getTableView().getItems().get(getIndex());
+
+
+                        if (tableItem.getIsRoot()) {
+                            Font font = Font.font(getFont().getName(), FontWeight.BOLD, FontPosture.REGULAR, getFont().getSize());
+                            setFont(font);
+                        } else {
+                            Font font = Font.font(getFont().getName(), FontWeight.NORMAL, FontPosture.REGULAR, getFont().getSize());
+                            setFont(font);
+                        }
+                    }
+                }
+            };
+        });
+    }
+
     private void setupHistoryTabUi() {
         // TODO: PATCH TABLE HISTORY PLACEHOLDER
         String[] columnNames = {"Version", "Date", "Files amount", "Total size"};
@@ -358,22 +400,27 @@ public class PatcherWindow extends Application {
 
         TableView<HistoryTableItem> table = new TableView<>(versions);
 
-        TableColumn<HistoryTableItem, String> versionColumn = new TableColumn<>(columnNames[0]);
+        TableColumn<HistoryTableItem, Object> versionColumn = new TableColumn<>(columnNames[0]);
         versionColumn.setCellValueFactory(new PropertyValueFactory<>("versionString"));
+        customiseFactory(versionColumn);
         table.getColumns().add(versionColumn);
         versionColumn.setMinWidth(90);
 
-        TableColumn<HistoryTableItem, String> dateColumn = new TableColumn<>(columnNames[1]);
+        TableColumn<HistoryTableItem, Object> dateColumn = new TableColumn<>(columnNames[1]);
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
+        customiseFactory(dateColumn);
         table.getColumns().add(dateColumn);
 
-        TableColumn<HistoryTableItem, String> filesColumn = new TableColumn<>(columnNames[2]);
+        TableColumn<HistoryTableItem, Object> filesColumn = new TableColumn<>(columnNames[2]);
         filesColumn.setCellValueFactory(new PropertyValueFactory<>("filesCount"));
+        customiseFactory(filesColumn);
         table.getColumns().add(filesColumn);
 
-        TableColumn<HistoryTableItem, String> sizeColumn = new TableColumn<>(columnNames[3]);
+        TableColumn<HistoryTableItem, Object> sizeColumn = new TableColumn<>(columnNames[3]);
         sizeColumn.setCellValueFactory(new PropertyValueFactory<>("totalSize"));
+        customiseFactory(sizeColumn);
         table.getColumns().add(sizeColumn);
+        sizeColumn.setMinWidth(100);
 
         checkoutButton = new Button("Checkout");
         checkoutButton.setDisable(true);
@@ -399,11 +446,16 @@ public class PatcherWindow extends Application {
             @Override public Void call() {
                 JSONObject versionsHistory = null;
                 try {
-                    versionsHistory = Versions.getHistory();
+                    versionsHistory = VersionsEndpoint.getHistory();
     
                     if (versionsHistory.getBoolean("success")) {
                         versionsHistory.getJSONArray("versions").forEach(v -> {
-                            versions.add(new HistoryTableItem(new Version(((JSONObject)v).put("files", new JSONArray()))));
+                            if (((JSONObject)v).getBoolean("is_root")) {
+                                rootVersion = new VersionEntity(((JSONObject)v).put("files", new JSONArray()));
+                                versions.add(new HistoryTableItem(rootVersion));
+                            } else {
+                                versions.add(new HistoryTableItem(new VersionEntity(((JSONObject)v).put("files", new JSONArray()))));
+                            }
                         });
 
                         table.setItems(versions);
@@ -584,17 +636,8 @@ public class PatcherWindow extends Application {
             ArrayList<Path> oldFiles = new ArrayList<>();
             ArrayList<Path> patchFiles = new ArrayList<>();
 
-            try {
-                Files.walkFileTree(projectPath, fileVisitor);
-                oldFiles = new ArrayList<>(fileVisitor.allFiles);
-                fileVisitor.allFiles.clear();
-
-                Files.walkFileTree(patchPath, fileVisitor);
-                patchFiles = new ArrayList<>(fileVisitor.allFiles);
-                fileVisitor.allFiles.clear();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
+            oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
+            patchFiles = new ArrayList<>(fileVisitor.walkFileTree(patchPath));
 
             Path relativePatchPath;
             Path newPath;
@@ -625,7 +668,7 @@ public class PatcherWindow extends Application {
                     e1.printStackTrace();
                 }
                 new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
-                        replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount, isFileMode);
+                        replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount, isFileMode, false);
             }
         });
         createPatchButton.setOnAction(e -> {
@@ -646,16 +689,13 @@ public class PatcherWindow extends Application {
                     .getJSONObject("patchCreationInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
             authWindow.saveConfig();
 
-            FileVisitor fileVisitor = new FileVisitor(newProjectPath);
+            FileVisitor fileVisitor = new FileVisitor();
 
             ArrayList<Path> oldFiles = new ArrayList<>();
             ArrayList<Path> newFiles = new ArrayList<>();
 
-            fileVisitor.walkFileTree(oldProjectPath);
-            oldFiles = new ArrayList<>(fileVisitor.allFiles);
-
-            fileVisitor.walkFileTree(newProjectPath);
-            newFiles = new ArrayList<>(fileVisitor.allFiles);
+            oldFiles = new ArrayList<>(fileVisitor.walkFileTree(oldProjectPath));
+            newFiles = new ArrayList<>(fileVisitor.walkFileTree(newProjectPath));
             
             generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
@@ -709,6 +749,15 @@ public class PatcherWindow extends Application {
     }
 
     private void setupRemoteEvents() {
+        chooseRemoteProjectButton.setOnAction(e -> {
+            choosePath(projectRemotePathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
+        chooseNewRemoteProjectButton.setOnAction(e -> {
+            choosePath(newProjectRemotePathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
+        chooseOldRemoteProjectButton.setOnAction(e -> {
+            choosePath(oldProjectRemotePathField, JFileChooser.FILES_AND_DIRECTORIES);
+        });
         checkoutButton.setOnAction(e -> {
             if (checkoutVersion != null) {
                 // TODO: CHECKOUT PLACEHOLDER
@@ -720,7 +769,7 @@ public class PatcherWindow extends Application {
         });
 
         remoteApplyPatchButton.setOnAction(e -> {
-            projectPath = Paths.get(projectPathField.getText());
+            projectPath = Paths.get(projectRemotePathField.getText());
             Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
             Path tmpPatchPath = Paths.get(projectPath.getParent().toString(), "patch_tmp", projectPath.getFileName().toString());
 
@@ -730,60 +779,71 @@ public class PatcherWindow extends Application {
             authWindow.config.getJSONObject(RunCourgette.os)
                     .getJSONObject("patchingInfo").put("projectPath", projectPath.toString());
             authWindow.config.getJSONObject(RunCourgette.os)
-                    .getJSONObject("patchingInfo").put("rememberPaths", rememberPathsCheckbox.isSelected());
+                    .getJSONObject("patchingInfo").put("rememberPaths", remoteRememberPathsCheckbox.isSelected());
             authWindow.saveConfig();
 
-            // TODO: implement project config
+            String currentVersion = null;
             // TODO: download patch sequences from current version to latest
-
-            FileVisitor fileVisitor = new FileVisitor();
-
-            ArrayList<Path> oldFiles = new ArrayList<>();
-            ArrayList<Path> patchFiles = new ArrayList<>();
-
-            try {
-                Files.walkFileTree(projectPath, fileVisitor);
-                oldFiles = new ArrayList<>(fileVisitor.allFiles);
-                fileVisitor.allFiles.clear();
-
-                Files.walkFileTree(tmpPatchPath, fileVisitor);
-                patchFiles = new ArrayList<>(fileVisitor.allFiles);
-                fileVisitor.allFiles.clear();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-
-            Path relativePatchPath;
-            Path newPath;
-            Path oldPath;
-            byte[] emptyData = {0};
-    
-            for (Path patchFile: patchFiles) {
-                relativePatchPath = tmpPatchPath.relativize(patchFile);
-                newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
-                        Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
-                                tmpProjectPath.getFileName().toString()).toString() :
-                        relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
-                oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
-                        relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
-
-                if (!oldFiles.contains(oldPath)) {
-                    try {
-                        Files.createFile(oldPath);
-                        Files.write(oldPath, emptyData);
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                    }
-                }
-    
+            if (Files.exists(Paths.get(projectPath.toString(), "config.json"))) {
+                File file = new File(Paths.get(projectPath.toString(), "config.json").toString());
+                String content;
                 try {
-                    Files.createDirectories(newPath.getParent());
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                    content = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                    currentVersion = new JSONObject(content).getString("currentVersion");
+                } catch (IOException ee) {
+                    ee.printStackTrace();
                 }
-                new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
-                        replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount, isFileMode);
             }
+
+            Map<String, String> params = new HashMap<>();
+            params.put("v_from", currentVersion);
+            params.put("v_to", rootVersion.getVersionString());
+
+            // try {
+            //     SaveResponse.save(VersionsEndpoint.getSwitch(params));
+            // } catch (JSONException | IOException e1) {
+            //     e1.printStackTrace();
+            // }
+
+            // FileVisitor fileVisitor = new FileVisitor();
+
+            // ArrayList<Path> oldFiles = new ArrayList<>();
+            // ArrayList<Path> patchFiles = new ArrayList<>();
+
+            // oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
+            // patchFiles = new ArrayList<>(fileVisitor.walkFileTree(tmpPatchPath));
+
+            // Path relativePatchPath;
+            // Path newPath;
+            // Path oldPath;
+            // byte[] emptyData = {0};
+    
+            // for (Path patchFile: patchFiles) {
+            //     relativePatchPath = tmpPatchPath.relativize(patchFile);
+            //     newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
+            //             Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
+            //                     tmpProjectPath.getFileName().toString()).toString() :
+            //             relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+            //     oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
+            //             relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+
+            //     if (!oldFiles.contains(oldPath)) {
+            //         try {
+            //             Files.createFile(oldPath);
+            //             Files.write(oldPath, emptyData);
+            //         } catch (IOException e1) {
+            //             e1.printStackTrace();
+            //         }
+            //     }
+    
+            //     try {
+            //         Files.createDirectories(newPath.getParent());
+            //     } catch (IOException e1) {
+            //         e1.printStackTrace();
+            //     }
+            //     new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
+            //             replaceFilesCheckbox.isSelected(), activeCourgetesApplyAmount, isFileMode);
+            // }
         });
 
         remoteCreatePatchButton.setOnAction(e -> {
@@ -807,16 +867,13 @@ public class PatcherWindow extends Application {
             ArrayList<Path> oldFiles = new ArrayList<>();
             ArrayList<Path> newFiles = new ArrayList<>();
 
-            fileVisitor.walkFileTree(oldProjectPath);
-            oldFiles = new ArrayList<>(fileVisitor.allFiles);
-
-            fileVisitor.walkFileTree(newProjectPath);
-            newFiles = new ArrayList<>(fileVisitor.allFiles);
+            oldFiles = new ArrayList<>(fileVisitor.walkFileTree(oldProjectPath));
+            newFiles = new ArrayList<>(fileVisitor.walkFileTree(newProjectPath));
             
             generatePatch(patchFolderPath, oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(patchFolderPath, newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
 
-            // TODO: detete folder after successful upload
+            // TODO: implement upload
             UnpackResources.deleteDirectory(patchFolderPath);
         });
     }
@@ -848,7 +905,7 @@ public class PatcherWindow extends Application {
                 e1.printStackTrace();
             }
             new CourgetteHandler().generatePatch(oldFile.toString(), newPath.toString(),
-                    patchFile.toString(), updatingComponent, isFileMode);
+                    patchFile.toString(), updatingComponent, isFileMode, false);
         }
 
         Path relativeNewPath;
@@ -867,7 +924,7 @@ public class PatcherWindow extends Application {
                     e1.printStackTrace();
                 }
                 new CourgetteHandler().generatePatch(oldPath.toString(), newFile.toString(),
-                        patchFile.toString(),updatingComponent, isFileMode);
+                        patchFile.toString(),updatingComponent, isFileMode, false);
             }
         }
     }

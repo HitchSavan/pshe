@@ -12,6 +12,7 @@ public class CourgetteHandler extends Thread {
     private boolean replaceFiles;
     private boolean generate;
     private boolean isFileMode;
+    private boolean redirectOutput;
     
     public static int MAX_THREADS_AMOUNT = 10;
     private static int currentThreadsAmount = 0;
@@ -26,13 +27,15 @@ public class CourgetteHandler extends Thread {
         --currentThreadsAmount;
     }
 
-    private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles, Label updatingComponent, boolean isFileMode) {
+    private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles,
+            Label updatingComponent, boolean isFileMode, boolean redirectOutput) {
         this.updatingComponent = updatingComponent;
         this.oldFile = oldFile;
         this.newPath = newPath;
         this.patchFile = patchFile;
         this.replaceFiles = replaceFiles;
         this.isFileMode = isFileMode;
+        this.redirectOutput = redirectOutput;
     }
 
     public static void updateComponent(Label updatingComponent) {
@@ -43,14 +46,16 @@ public class CourgetteHandler extends Thread {
         }
     }
     
-    public void generatePatch(String oldFile, String newPath, String patchFile, Label updatingComponent, boolean isFileMode) {
-        init(oldFile, newPath, patchFile, false, updatingComponent, isFileMode);
+    public void generatePatch(String oldFile, String newPath, String patchFile,
+            Label updatingComponent, boolean isFileMode, boolean redirectOutput) {
+        init(oldFile, newPath, patchFile, false, updatingComponent, isFileMode, redirectOutput);
         generate = true;
         start();
     }
     
-    public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles, Label updatingComponent, boolean isFileMode) {
-        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, isFileMode);
+    public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles,
+            Label updatingComponent, boolean isFileMode, boolean redirectOutput) {
+        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, isFileMode, redirectOutput);
         generate = false;
         start();
     }
@@ -68,9 +73,9 @@ public class CourgetteHandler extends Thread {
         increaseThreadsAmount();
         updateComponent(updatingComponent);
         if (generate) {
-            Patcher.generatePatch(oldFile, newPath, patchFile);
+            Patcher.generatePatch(oldFile, newPath, patchFile, redirectOutput);
         } else {
-            Patcher.applyPatch(oldFile, newPath, patchFile, replaceFiles);
+            Patcher.applyPatch(oldFile, newPath, patchFile, replaceFiles, redirectOutput);
         }
         decreaseThreadsAmount();
         updateComponent(updatingComponent);
