@@ -15,6 +15,7 @@ public class CourgetteHandler extends Thread {
     
     private static int MAX_THREADS_AMOUNT = 10;
     private static int currentThreadsAmount = 0;
+    private static int totalThreadsAmount = 0;
 
     private synchronized static int currentThreadsAmount() {
         return currentThreadsAmount;
@@ -24,6 +25,16 @@ public class CourgetteHandler extends Thread {
     }
     private synchronized static void decreaseThreadsAmount() {
         --currentThreadsAmount;
+    }
+    
+    public synchronized static int totalThreadsAmount() {
+        return totalThreadsAmount;
+    }
+    private synchronized static void increaseTotalThreadsAmount() {
+        ++totalThreadsAmount;
+    }
+    private synchronized static void decreaseTotalThreadsAmount() {
+        --totalThreadsAmount;
     }
 
     // TODO: disable exec button
@@ -42,7 +53,8 @@ public class CourgetteHandler extends Thread {
     private static void updateComponent(Label updatingComponent) {
         if (updatingComponent != null) {
             Platform.runLater(() -> {
-                updatingComponent.setText("Active Courgette instances:\t" + currentThreadsAmount());
+                updatingComponent.setText("Active Courgette instances:\t" + currentThreadsAmount()
+                        + System.lineSeparator() + "Files remains:\t" + totalThreadsAmount());
             });
         }
     }
@@ -59,6 +71,7 @@ public class CourgetteHandler extends Thread {
 
     @Override
     public void run() {
+        increaseTotalThreadsAmount();
         while (currentThreadsAmount() >= MAX_THREADS_AMOUNT) {
             try {
                 sleep(100);
@@ -77,6 +90,7 @@ public class CourgetteHandler extends Thread {
             Patcher.applyPatch(oldFile, newPath, patchFile, replaceFiles, redirectOutput);
         }
         decreaseThreadsAmount();
+        decreaseTotalThreadsAmount();
         updateComponent(updatingComponent);
     }
 }
