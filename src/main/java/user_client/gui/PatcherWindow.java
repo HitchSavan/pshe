@@ -381,7 +381,6 @@ public class PatcherWindow extends Application {
     }
 
     private void setupHistoryTabUi() {
-        // TODO: PATCH TABLE HISTORY PLACEHOLDER
         String[] columnNames = {"Version", "Date", "Files amount", "Total size"};
 
         ObservableList<HistoryTableItem> versions = FXCollections.observableArrayList();
