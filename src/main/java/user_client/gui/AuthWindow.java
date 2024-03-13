@@ -95,8 +95,7 @@ public class AuthWindow extends Stage {
                     .put("remotePatchingInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("replaceFiles", false)
-                    .put("projectPath", "")
-                    .put("patchPath", ""));
+                    .put("projectPath", ""));
         if (!config.getJSONObject(RunCourgette.os).has("localPatchCreationInfo"))
             config.getJSONObject(RunCourgette.os)
                     .put("localPatchCreationInfo", new JSONObject()
@@ -108,7 +107,6 @@ public class AuthWindow extends Stage {
             config.getJSONObject(RunCourgette.os)
                     .put("remotePatchCreationInfo", new JSONObject()
                     .put("rememberPaths", false)
-                    .put("patchPath", "")
                     .put("newProjectPath", "")
                     .put("oldProjectPath", ""));
         saveConfig();
