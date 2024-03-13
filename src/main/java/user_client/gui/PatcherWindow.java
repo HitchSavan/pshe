@@ -920,10 +920,9 @@ public class PatcherWindow extends Application {
 
                         UnpackResources.deleteDirectory(folder);
                     }
+                    if (tmpPatchPath.getParent().endsWith("patch_tmp"))
+                        UnpackResources.deleteDirectory(tmpPatchPath.getParent());
 
-                    UnpackResources.deleteDirectory(tmpPatchPath);
-
-                    
                     Instant finish = Instant.now();
                     StringBuilder str = new StringBuilder("Status: done ");
                     str.append(ChronoUnit.MINUTES.between(start, finish));
