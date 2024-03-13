@@ -66,7 +66,7 @@ public class CourgetteHandler extends Thread {
     
     public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles,
             Label updatingComponent, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, true, redirectOutput);
+        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, false, redirectOutput);
     }
 
     @Override

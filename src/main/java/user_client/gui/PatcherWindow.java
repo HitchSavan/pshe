@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -142,6 +144,8 @@ public class PatcherWindow extends Application {
     Label activeCourgetesGenAmount;
     Label remoteActiveCourgetesApplyAmount;
     Label remoteActiveCourgetesGenAmount;
+    Label remoteGenStatus;
+    Label remoteApplyStatus;
     
     public static void runApp(String[] args) {
         System.setProperty("javafx.preloader", CustomPreloader.class.getCanonicalName());
@@ -336,19 +340,25 @@ public class PatcherWindow extends Application {
         remoteRememberApplyPathsCheckbox = new CheckBox("Remember");
         remoteRememberApplyPathsCheckbox.setSelected(rememberPaths);
 
+        remoteReplaceFilesCheckbox = new CheckBox("Replace files");
+        remoteReplaceFilesCheckbox.setSelected(false);
+
         VBox checkboxPanel = new VBox();
         checkboxPanel.setPadding(new Insets(5));
-        checkboxPanel.getChildren().addAll(remoteRememberApplyPathsCheckbox);
+        checkboxPanel.getChildren().addAll(remoteRememberApplyPathsCheckbox, remoteReplaceFilesCheckbox);
 
         remoteApplyPatchButton = new Button("Patch to latest version");
         remoteApplyPatchButton.setPrefSize(150, 0);
+        remoteApplyPatchButton.setDisable(true);
 
         remoteActiveCourgetesApplyAmount = new Label("Active Courgette instances:\t0");
+        remoteApplyStatus = new Label("Status: idle");
 
         applyPatchTabContent = new VBox();
         applyPatchTabContent.setAlignment(Pos.TOP_CENTER);
         applyPatchTabContent.setPadding(new Insets(5));
-        applyPatchTabContent.getChildren().addAll(projectPathPanel, checkboxPanel, remoteApplyPatchButton, remoteActiveCourgetesApplyAmount);
+        applyPatchTabContent.getChildren().addAll(projectPathPanel, checkboxPanel,
+                remoteApplyPatchButton, remoteActiveCourgetesApplyAmount, remoteApplyStatus);
     }
 
     private void customiseFactory(TableColumn<HistoryTableItem, Object> columnCel) {
@@ -440,6 +450,7 @@ public class PatcherWindow extends Application {
                             if (((JSONObject)v).getBoolean("is_root")) {
                                 rootVersion = new VersionEntity(((JSONObject)v).put("files", new JSONArray()));
                                 versions.add(new HistoryTableItem(rootVersion));
+                                remoteApplyPatchButton.setDisable(false);
                             } else {
                                 versions.add(new HistoryTableItem(new VersionEntity(((JSONObject)v).put("files", new JSONArray()))));
                             }
@@ -812,8 +823,14 @@ public class PatcherWindow extends Application {
 
             Task<Void> task = new Task<>() {
                 @Override public Void call() throws InterruptedException {
+
+                    Instant start = Instant.now();
+    
                     JSONObject response = null;
                     try {
+                        Platform.runLater(() -> {
+                            remoteApplyStatus.setText("Status: getting patch sequence from " + params.get("v_from") + " to " + params.get("v_to"));
+                        });
                         response = VersionsEndpoint.getSwitch(params);
                     } catch (IOException e1) {
                         e1.printStackTrace();
@@ -837,8 +854,12 @@ public class PatcherWindow extends Application {
                                 Path subfolderPath = Paths.get(tmpPatchPath.toString(),
                                         patchParams.get("v_from") + patchParams.get("v_to"));
                                 patchPath = Paths.get(subfolderPath.toString(), file.getString("location"));
-                                subfolderSequence.add(subfolderPath);
-                                PatchesEndpoint.getFile(patchPath, params);
+                                if (!subfolderSequence.contains(subfolderPath))
+                                    subfolderSequence.add(subfolderPath);
+                                Platform.runLater(() -> {
+                                    remoteApplyStatus.setText("Status: downloading patch " + patchParams.get("file_location"));
+                                });
+                                PatchesEndpoint.getFile(patchPath, patchParams);
                             } catch (JSONException | IOException e) {
                                 e.printStackTrace();
                             }
@@ -865,11 +886,10 @@ public class PatcherWindow extends Application {
                         for (Path patchFile: patchFiles) {
                             relativePatchPath = folder.relativize(patchFile);
                             newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
-                                    Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
-                                            tmpProjectPath.getFileName().toString()).toString() :
-                                    relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+                                    Paths.get("..", "..", "..", tmpProjectPath.getFileName().toString()).toString() :
+                                    relativePatchPath.toString()).normalize();
                             oldPath = Paths.get(remoteProjectPath.toString(), relativePatchPath.toString().equals("") ? "" :
-                                    relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
+                                    relativePatchPath.toString()).normalize();
 
                             if (!oldFiles.contains(oldPath)) {
                                 try {
@@ -890,6 +910,9 @@ public class PatcherWindow extends Application {
                                     remoteReplaceFilesCheckbox.isSelected(), remoteActiveCourgetesApplyAmount, false);
                             threads.add(thread);
                         }
+                        Platform.runLater(() -> {
+                            remoteApplyStatus.setText("Status: patching " + folder.toString());
+                        });
 
                         for (CourgetteHandler thread: threads) {
                             thread.join();
@@ -899,6 +922,17 @@ public class PatcherWindow extends Application {
                     }
 
                     UnpackResources.deleteDirectory(tmpPatchPath);
+
+                    
+                    Instant finish = Instant.now();
+                    StringBuilder str = new StringBuilder("Status: done ");
+                    str.append(ChronoUnit.MINUTES.between(start, finish));
+                    str.append(ChronoUnit.SECONDS.between(start, finish) - ChronoUnit.MINUTES.between(start, finish)*60);
+                    str.append(" mins");
+
+                    Platform.runLater(() -> {
+                        remoteApplyStatus.setText(str.toString());
+                    });
 
                     return null;
                 }
