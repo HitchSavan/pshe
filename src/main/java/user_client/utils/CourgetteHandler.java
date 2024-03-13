@@ -2,7 +2,7 @@ package user_client.utils;
 
 import javafx.application.Platform;
 import javafx.scene.control.Label;
-import patcher.patching_utils.Patcher;
+import patcher.utils.patching_utils.Patcher;
 
 public class CourgetteHandler extends Thread {
     private Label updatingComponent;
@@ -11,34 +11,35 @@ public class CourgetteHandler extends Thread {
     private String patchFile;
     private boolean replaceFiles;
     private boolean generate;
-    private boolean isFileMode;
     private boolean redirectOutput;
     
-    public static int MAX_THREADS_AMOUNT = 10;
+    private static int MAX_THREADS_AMOUNT = 10;
     private static int currentThreadsAmount = 0;
 
-    public synchronized static int currentThreadsAmount() {
+    private synchronized static int currentThreadsAmount() {
         return currentThreadsAmount;
     }
-    public synchronized static void increaseThreadsAmount() {
+    private synchronized static void increaseThreadsAmount() {
         ++currentThreadsAmount;
     }
-    public synchronized static void decreaseThreadsAmount() {
+    private synchronized static void decreaseThreadsAmount() {
         --currentThreadsAmount;
     }
 
+    // TODO: disable exec button
     private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles,
-            Label updatingComponent, boolean isFileMode, boolean redirectOutput) {
+            Label updatingComponent, boolean generate, boolean redirectOutput) {
         this.updatingComponent = updatingComponent;
         this.oldFile = oldFile;
         this.newPath = newPath;
         this.patchFile = patchFile;
         this.replaceFiles = replaceFiles;
-        this.isFileMode = isFileMode;
         this.redirectOutput = redirectOutput;
+        this.generate = generate;
+        start();
     }
 
-    public static void updateComponent(Label updatingComponent) {
+    private static void updateComponent(Label updatingComponent) {
         if (updatingComponent != null) {
             Platform.runLater(() -> {
                 updatingComponent.setText("Active Courgette instances:\t" + currentThreadsAmount());
@@ -47,17 +48,13 @@ public class CourgetteHandler extends Thread {
     }
     
     public void generatePatch(String oldFile, String newPath, String patchFile,
-            Label updatingComponent, boolean isFileMode, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, false, updatingComponent, isFileMode, redirectOutput);
-        generate = true;
-        start();
+            Label updatingComponent, boolean redirectOutput) {
+        init(oldFile, newPath, patchFile, false, updatingComponent, true, redirectOutput);
     }
     
     public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles,
-            Label updatingComponent, boolean isFileMode, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, isFileMode, redirectOutput);
-        generate = false;
-        start();
+            Label updatingComponent, boolean redirectOutput) {
+        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, true, redirectOutput);
     }
 
     @Override
@@ -66,12 +63,14 @@ public class CourgetteHandler extends Thread {
             try {
                 sleep(100);
             } catch (InterruptedException e) {
+                AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
                 e.printStackTrace();
+                return;
             }
         }
-
         increaseThreadsAmount();
         updateComponent(updatingComponent);
+
         if (generate) {
             Patcher.generatePatch(oldFile, newPath, patchFile, redirectOutput);
         } else {

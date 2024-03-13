@@ -19,8 +19,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import patcher.data_utils.DataEncoder;
-import patcher.patching_utils.RunCourgette;
+import patcher.utils.data_utils.DataEncoder;
+import patcher.utils.patching_utils.RunCourgette;
+import user_client.utils.AlertWindow;
 
 public class AuthWindow extends Stage {
 
@@ -71,7 +72,9 @@ public class AuthWindow extends Stage {
                 content = DataEncoder.toString(Files.readAllBytes(Paths.get(file.toURI())));
                 config = new JSONObject(content);
             } catch (IOException e) {
+                AlertWindow.showErrorWindow("Cannot open app config file");
                 e.printStackTrace();
+                return;
             }
         } else {
             config.put("userInfo", new JSONObject().put("login", "").put("pass", "").put("url", ""));
@@ -79,20 +82,36 @@ public class AuthWindow extends Stage {
         
         if (!config.has(RunCourgette.os)) {
             config.put(RunCourgette.os, new JSONObject());
+        }
+        if (!config.getJSONObject(RunCourgette.os).has("localPatchingInfo"))
             config.getJSONObject(RunCourgette.os)
-                    .put("patchingInfo", new JSONObject()
+                    .put("localPatchingInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("replaceFiles", false)
                     .put("projectPath", "")
                     .put("patchPath", ""));
+        if (!config.getJSONObject(RunCourgette.os).has("remotePatchingInfo"))
             config.getJSONObject(RunCourgette.os)
-                    .put("patchCreationInfo", new JSONObject()
+                    .put("remotePatchingInfo", new JSONObject()
+                    .put("rememberPaths", false)
+                    .put("replaceFiles", false)
+                    .put("projectPath", "")
+                    .put("patchPath", ""));
+        if (!config.getJSONObject(RunCourgette.os).has("localPatchCreationInfo"))
+            config.getJSONObject(RunCourgette.os)
+                    .put("localPatchCreationInfo", new JSONObject()
                     .put("rememberPaths", false)
                     .put("patchPath", "")
                     .put("newProjectPath", "")
                     .put("oldProjectPath", ""));
-            saveConfig();
-        }
+        if (!config.getJSONObject(RunCourgette.os).has("remotePatchCreationInfo"))
+            config.getJSONObject(RunCourgette.os)
+                    .put("remotePatchCreationInfo", new JSONObject()
+                    .put("rememberPaths", false)
+                    .put("patchPath", "")
+                    .put("newProjectPath", "")
+                    .put("oldProjectPath", ""));
+        saveConfig();
 
         userLogin = config.getJSONObject("userInfo").getString("login");
         userPassword = config.getJSONObject("userInfo").getString("pass");
@@ -182,7 +201,9 @@ public class AuthWindow extends Stage {
             jsonOutputStream.write(config.toString(4).getBytes());
             jsonOutputStream.close();
         } catch (JSONException | IOException e1) {
+            AlertWindow.showErrorWindow("Cannot save app config file");
             e1.printStackTrace();
+            return;
         }
     }
 }
