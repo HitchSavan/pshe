@@ -923,12 +923,13 @@ public class PatcherWindow extends Application {
                     if (tmpPatchPath.getParent().endsWith("patch_tmp"))
                         UnpackResources.deleteDirectory(tmpPatchPath.getParent());
 
+                    // TODO: integrity check with root, update version in config, copy psheignore and project config
+
                     Instant finish = Instant.now();
                     StringBuilder str = new StringBuilder("Status: done ");
                     str.append(ChronoUnit.MINUTES.between(start, finish));
                     str.append(ChronoUnit.SECONDS.between(start, finish) - ChronoUnit.MINUTES.between(start, finish)*60);
                     str.append(" mins");
-
                     Platform.runLater(() -> {
                         remoteApplyStatus.setText(str.toString());
                     });
