@@ -1,7 +1,6 @@
 package user_client.gui;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -20,6 +19,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import patcher.utils.data_utils.DataEncoder;
+import patcher.utils.files_utils.Directories;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.utils.AlertWindow;
 
@@ -194,14 +194,10 @@ public class AuthWindow extends Stage {
 
     public void saveConfig() {
         try {
-            FileOutputStream jsonOutputStream;
-            jsonOutputStream = new FileOutputStream("config.json");
-            jsonOutputStream.write(config.toString(4).getBytes());
-            jsonOutputStream.close();
-        } catch (JSONException | IOException e1) {
-            AlertWindow.showErrorWindow("Cannot save app config file");
-            e1.printStackTrace();
-            return;
+            Directories.saveJSONFile(Paths.get("config.json"), config);
+        } catch (JSONException | IOException e) {
+            AlertWindow.showErrorWindow("Cannot save app config");
+            e.printStackTrace();
         }
     }
 }

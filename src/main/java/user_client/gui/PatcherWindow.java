@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import patcher.utils.files_utils.FileVisitor;
-import patcher.utils.files_utils.UnpackResources;
+import patcher.utils.files_utils.Directories;
 import patcher.utils.patching_utils.RunCourgette;
 import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
@@ -234,7 +235,7 @@ public class PatcherWindow extends Application {
         
         this.primaryStage.setOnCloseRequest(e -> {
             authWindow.saveConfig();
-            UnpackResources.deleteDirectory("tmp");
+            Directories.deleteDirectory("tmp");
             System.exit(0);
         });
 
@@ -648,13 +649,24 @@ public class PatcherWindow extends Application {
                     .getJSONObject("localPatchingInfo").put("replaceFiles", replaceFilesCheckbox.isSelected());
             authWindow.saveConfig();
 
-            FileVisitor fileVisitor = new FileVisitor();
+            FileVisitor fileVisitor = null;
+            try {
+                fileVisitor = new FileVisitor();
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                e1.printStackTrace();
+            }
 
             ArrayList<Path> oldFiles = new ArrayList<>();
             ArrayList<Path> patchFiles = new ArrayList<>();
 
-            oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
-            patchFiles = new ArrayList<>(fileVisitor.walkFileTree(patchPath));
+            try {
+                oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
+                patchFiles = new ArrayList<>(fileVisitor.walkFileTree(patchPath));
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                e1.printStackTrace();
+            }
 
             Path relativePatchPath;
             Path newPath;
@@ -710,13 +722,24 @@ public class PatcherWindow extends Application {
                     .getJSONObject("localPatchCreationInfo").put("rememberPaths", rememberGenPathsCheckbox.isSelected());
             authWindow.saveConfig();
 
-            FileVisitor fileVisitor = new FileVisitor();
+            FileVisitor fileVisitor = null;
+            try {
+                fileVisitor = new FileVisitor();
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                e1.printStackTrace();
+            }
 
             ArrayList<Path> oldFiles = new ArrayList<>();
             ArrayList<Path> newFiles = new ArrayList<>();
 
-            oldFiles = new ArrayList<>(fileVisitor.walkFileTree(oldProjectPath));
-            newFiles = new ArrayList<>(fileVisitor.walkFileTree(newProjectPath));
+            try {
+                oldFiles = new ArrayList<>(fileVisitor.walkFileTree(oldProjectPath));
+                newFiles = new ArrayList<>(fileVisitor.walkFileTree(newProjectPath));
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                e1.printStackTrace();
+            }
             
             generatePatch(oldProjectPath, newProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
@@ -822,7 +845,7 @@ public class PatcherWindow extends Application {
             params.put("v_to", rootVersion.getVersionString());
 
             Task<Void> task = new Task<>() {
-                @Override public Void call() throws InterruptedException {
+                @Override public Void call() throws InterruptedException, IOException {
 
                     Instant start = Instant.now();
     
@@ -918,12 +941,29 @@ public class PatcherWindow extends Application {
                             thread.join();
                         }
 
-                        UnpackResources.deleteDirectory(folder);
+                        Directories.deleteDirectory(folder);
                     }
                     if (tmpPatchPath.getParent().endsWith("patch_tmp"))
-                        UnpackResources.deleteDirectory(tmpPatchPath.getParent());
+                        Directories.deleteDirectory(tmpPatchPath.getParent());
 
-                    // TODO: integrity check with root, update version in config, copy psheignore and project config
+                    // TODO: integrity check with root
+                    Path configFilePath = null;
+                    if (!remoteReplaceFilesCheckbox.isSelected()) {
+                        configFilePath = Paths.get(tmpProjectPath.toString(), "config.json");
+
+                        Files.copy(Paths.get(remoteProjectPath.toString(), ".psheignore"),
+                                Paths.get(tmpProjectPath.toString(), ".psheignore"), StandardCopyOption.REPLACE_EXISTING);
+                    } else {
+                        configFilePath = Paths.get(remoteProjectPath.toString(), "config.json");
+                    }
+
+                    JSONObject updatedConfig = new JSONObject().put("currentVersion", rootVersion.getVersionString());
+                    try {
+                        Directories.saveJSONFile(configFilePath, updatedConfig);
+                    } catch (JSONException | IOException e1) {
+                        AlertWindow.showErrorWindow("Cannot update project config file");
+                        e1.printStackTrace();
+                    }
 
                     Instant finish = Instant.now();
                     StringBuilder str = new StringBuilder("Status: done ");
@@ -956,19 +996,30 @@ public class PatcherWindow extends Application {
                     .getJSONObject("remotePatchCreationInfo").put("rememberPaths", remoteRememberGenPathsCheckbox.isSelected());
             authWindow.saveConfig();
 
-            FileVisitor fileVisitor = new FileVisitor(remoteNewProjectPath);
+            FileVisitor fileVisitor = null;
+            try {
+                fileVisitor = new FileVisitor(remoteNewProjectPath);
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                e1.printStackTrace();
+            }
 
             ArrayList<Path> oldFiles = new ArrayList<>();
             ArrayList<Path> newFiles = new ArrayList<>();
 
-            oldFiles = new ArrayList<>(fileVisitor.walkFileTree(remoteOldProjectPath));
-            newFiles = new ArrayList<>(fileVisitor.walkFileTree(remoteNewProjectPath));
+            try {
+                oldFiles = new ArrayList<>(fileVisitor.walkFileTree(remoteOldProjectPath));
+                newFiles = new ArrayList<>(fileVisitor.walkFileTree(remoteNewProjectPath));
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                e1.printStackTrace();
+            }
             
             generatePatch(patchFolderPath, remoteOldProjectPath, remoteNewProjectPath, oldFiles, newFiles, "forward", activeCourgetesGenAmount);
             generatePatch(patchFolderPath, remoteNewProjectPath, remoteOldProjectPath, newFiles, oldFiles, "backward", activeCourgetesGenAmount);
 
             // TODO: implement upload
-            UnpackResources.deleteDirectory(patchFolderPath);
+            Directories.deleteDirectory(patchFolderPath);
         });
     }
 

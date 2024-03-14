@@ -1,5 +1,7 @@
 package user_client.utils;
 
+import java.io.IOException;
+
 import javafx.application.Platform;
 import javafx.scene.control.Label;
 import patcher.utils.patching_utils.Patcher;
@@ -84,10 +86,15 @@ public class CourgetteHandler extends Thread {
         increaseThreadsAmount();
         updateComponent(updatingComponent);
 
-        if (generate) {
-            Patcher.generatePatch(oldFile, newPath, patchFile, redirectOutput);
-        } else {
-            Patcher.applyPatch(oldFile, newPath, patchFile, replaceFiles, redirectOutput);
+        try {
+            if (generate) {
+                Patcher.generatePatch(oldFile, newPath, patchFile, redirectOutput);
+            } else {
+                Patcher.applyPatch(oldFile, newPath, patchFile, replaceFiles, redirectOutput);
+            }
+        } catch (IOException | InterruptedException e) {
+            AlertWindow.showErrorWindow("Cannot run courgette instance");
+            e.printStackTrace();
         }
         decreaseThreadsAmount();
         decreaseTotalThreadsAmount();
