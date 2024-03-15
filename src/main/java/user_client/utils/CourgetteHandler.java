@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import javafx.application.Platform;
 import javafx.scene.control.Label;
+import lombok.Getter;
+import lombok.Setter;
 import patcher.utils.patching_utils.Patcher;
 
 public class CourgetteHandler extends Thread {
@@ -15,7 +17,10 @@ public class CourgetteHandler extends Thread {
     private boolean generate;
     private boolean redirectOutput;
     
-    private static int MAX_THREADS_AMOUNT = 10;
+    @Getter @Setter
+    private static int MAX_THREADS_AMOUNT = 30;
+    @Getter @Setter
+    private static int MAX_ACTIVE_COURGETTES_AMOUNT = 20;
     private static int currentThreadsAmount = 0;
     private static int totalThreadsAmount = 0;
 
@@ -32,10 +37,13 @@ public class CourgetteHandler extends Thread {
     public synchronized static int totalThreadsAmount() {
         return totalThreadsAmount;
     }
-    private synchronized static void increaseTotalThreadsAmount() {
+    public synchronized static void setTotalThreadsAmount(int _totalThreadsAmount) {
+        totalThreadsAmount = _totalThreadsAmount;
+    }
+    public synchronized static void increaseTotalThreadsAmount() {
         ++totalThreadsAmount;
     }
-    private synchronized static void decreaseTotalThreadsAmount() {
+    public synchronized static void decreaseTotalThreadsAmount() {
         --totalThreadsAmount;
     }
 
@@ -73,10 +81,10 @@ public class CourgetteHandler extends Thread {
 
     @Override
     public void run() {
-        increaseTotalThreadsAmount();
-        while (currentThreadsAmount() >= MAX_THREADS_AMOUNT) {
+        // increaseTotalThreadsAmount();
+        while (currentThreadsAmount() >= MAX_ACTIVE_COURGETTES_AMOUNT) {
             try {
-                sleep(100);
+                sleep(10);
             } catch (InterruptedException e) {
                 AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
                 e.printStackTrace();
@@ -97,7 +105,7 @@ public class CourgetteHandler extends Thread {
             e.printStackTrace();
         }
         decreaseThreadsAmount();
-        decreaseTotalThreadsAmount();
+        // decreaseTotalThreadsAmount();
         updateComponent(updatingComponent);
     }
 }

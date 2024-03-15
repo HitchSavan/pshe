@@ -3,7 +3,9 @@ package user_client.gui;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,7 +55,6 @@ import patcher.utils.data_utils.IntegrityChecker;
 import patcher.utils.files_utils.Directories;
 import patcher.utils.patching_utils.RunCourgette;
 import patcher.remote_api.endpoints.FilesEndpoint;
-import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
 import patcher.remote_api.entities.VersionEntity;
 import patcher.utils.remote_utils.Connector;
@@ -400,12 +401,51 @@ public class PatcherWindow extends Application {
         });
     }
 
+    private void updateTableContent(ObservableList<HistoryTableItem> versions) {
+        Task<Void> task = new Task<>() {
+            @Override public Void call() {
+                remoteApplyPatchButton.setDisable(true);
+                checkoutButton.setDisable(true);
+                versions.clear();
+                JSONObject versionsHistory = null;
+                try {
+                    versionsHistory = VersionsEndpoint.getHistory();
+    
+                    if (versionsHistory.getBoolean("success")) {
+                        versionsHistory.getJSONArray("versions").forEach(v -> {
+                            if (((JSONObject)v).getBoolean("is_root")) {
+                                rootVersion = new VersionEntity(((JSONObject)v).put("files", new JSONArray()));
+                                versions.add(new HistoryTableItem(rootVersion));
+                                remoteApplyPatchButton.setDisable(false);
+                            } else {
+                                versions.add(new HistoryTableItem(new VersionEntity(((JSONObject)v).put("files", new JSONArray()))));
+                            }
+                        });
+                    }
+                } catch (IOException e) {
+                    AlertWindow.showErrorWindow("Cannot load history");
+                    e.printStackTrace();
+                }
+                checkoutButton.setDisable(false);
+                return null;
+            }
+        };
+
+        new Thread(task).start();
+    }
+    private void updateTableContent(TableView<HistoryTableItem> table) {
+        ObservableList<HistoryTableItem> versions = table.getItems();
+        updateTableContent(versions);
+        table.setItems(versions);
+    }
+
     private void setupHistoryTabUi() {
         String[] columnNames = {"Version", "Date", "Files amount", "Total size"};
 
         ObservableList<HistoryTableItem> versions = FXCollections.observableArrayList();
 
-        TableView<HistoryTableItem> table = new TableView<>(versions);
+        TableView<HistoryTableItem> table = new TableView<>();
+        table.setItems(versions);
 
         TableColumn<HistoryTableItem, Object> versionColumn = new TableColumn<>(columnNames[0]);
         versionColumn.setCellValueFactory(new PropertyValueFactory<>("versionString"));
@@ -450,34 +490,7 @@ public class PatcherWindow extends Application {
         tablePane.setPadding(new Insets(5));
         tablePane.getChildren().addAll(table, checkoutButton);
 
-        Task<Void> task = new Task<>() {
-            @Override public Void call() {
-                JSONObject versionsHistory = null;
-                try {
-                    versionsHistory = VersionsEndpoint.getHistory();
-    
-                    if (versionsHistory.getBoolean("success")) {
-                        versionsHistory.getJSONArray("versions").forEach(v -> {
-                            if (((JSONObject)v).getBoolean("is_root")) {
-                                rootVersion = new VersionEntity(((JSONObject)v).put("files", new JSONArray()));
-                                versions.add(new HistoryTableItem(rootVersion));
-                                remoteApplyPatchButton.setDisable(false);
-                            } else {
-                                versions.add(new HistoryTableItem(new VersionEntity(((JSONObject)v).put("files", new JSONArray()))));
-                            }
-                        });
-
-                        table.setItems(versions);
-                    }
-                } catch (IOException e) {
-                    AlertWindow.showErrorWindow("Cannot load history");
-                    e.printStackTrace();
-                }
-                return null;
-            }
-        };
-
-        new Thread(task).start();
+        updateTableContent(table);
         
         boolean rememberPaths = false;
 
@@ -921,6 +934,8 @@ public class PatcherWindow extends Application {
     private void checkoutToVersion(Path projectPath, boolean replaceFiles, String toVersion,
             Label statusLabel, Label courgettesAmountLabel, Button button) {
         button.setDisable(true);
+        StringBuffer checkoutDump = new StringBuffer();
+
         Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
         Path tmpPatchPath = Paths.get(projectPath.getParent().toString(), "patch_tmp", projectPath.getFileName().toString());
 
@@ -979,18 +994,16 @@ public class PatcherWindow extends Application {
                                 "file_location", file.getString("location")
                             )
                         );
-                        Path patchPath = null;
                         try {
                             Path subfolderPath = Paths.get(tmpPatchPath.toString(),
                                     "from_" + patchParams.get("v_from") + "_to_" + patchParams.get("v_to"));
-                            patchPath = Paths.get(subfolderPath.toString(), file.getString("location"));
                             if (!subfolderSequence.contains(subfolderPath))
                                 subfolderSequence.add(subfolderPath);
                             Platform.runLater(() -> {
                                 statusLabel.setText("Status: downloading patch " + patchParams.get("file_location"));
                             });
-                            PatchesEndpoint.getFile(patchPath, patchParams);
-                        } catch (JSONException | IOException e) {
+                            // PatchesEndpoint.getFile(patchPath, patchParams);
+                        } catch (JSONException e) {
                             e.printStackTrace();
                         }
                     });
@@ -1002,6 +1015,7 @@ public class PatcherWindow extends Application {
                 ArrayList<Path> patchFiles = new ArrayList<>();
 
                 oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
+                checkoutDump.append("old files amount ").append(oldFiles.size()).append(System.lineSeparator());
 
                 Path relativePatchPath;
                 Path newPath;
@@ -1010,16 +1024,22 @@ public class PatcherWindow extends Application {
 
                 ArrayList<CourgetteHandler> threads = new ArrayList<>();
 
+                CourgetteHandler.setMAX_THREADS_AMOUNT(30);
+                CourgetteHandler.setMAX_ACTIVE_COURGETTES_AMOUNT(20);
+
                 for (Path folder: subfolderSequence) {
                     patchFiles = new ArrayList<>(fileVisitor.walkFileTree(folder));
+                    checkoutDump.append("patch ").append(folder).append(" files amount ")
+                            .append(patchFiles.size()).append(System.lineSeparator());
+
+                    CourgetteHandler.setTotalThreadsAmount(patchFiles.size());
 
                     for (Path patchFile: patchFiles) {
                         relativePatchPath = folder.relativize(patchFile);
                         newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
                                 Paths.get("..", "..", "..", tmpProjectPath.getFileName().toString()).toString() :
                                 relativePatchPath.toString()).normalize();
-                        oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
-                                relativePatchPath.toString()).normalize();
+                        oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString()).normalize();
 
                         if (!oldFiles.contains(oldPath)) {
                             try {
@@ -1035,25 +1055,34 @@ public class PatcherWindow extends Application {
                         } catch (IOException e1) {
                             e1.printStackTrace();
                         }
+                        checkoutDump.append("\tpatching ").append(patchFile).append(System.lineSeparator());
                         CourgetteHandler thread = new CourgetteHandler();
-                        thread.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
-                                replaceFiles, courgettesAmountLabel, false);
+                        // thread.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
+                        //         replaceFiles, courgettesAmountLabel, false);
                         threads.add(thread);
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: patching " + folder.relativize(patchFile).toString());
+                        });
+                        while (CourgetteHandler.activeCount() >= CourgetteHandler.getMAX_THREADS_AMOUNT()) {
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                                AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
+                                e.printStackTrace();
+                            }
+                        }
+                        CourgetteHandler.decreaseTotalThreadsAmount();
                     }
-                    Platform.runLater(() -> {
-                        statusLabel.setText("Status: patching " + folder.toString());
-                    });
 
                     for (CourgetteHandler thread: threads) {
                         thread.join();
                     }
 
-                    Directories.deleteDirectory(folder);
+                    // Directories.deleteDirectory(folder);
                 }
-                if (tmpPatchPath.getParent().endsWith("patch_tmp"))
-                    Directories.deleteDirectory(tmpPatchPath.getParent());
-
-                // TODO: integrity check with root
+                // if (tmpPatchPath.getParent().endsWith("patch_tmp"))
+                //     Directories.deleteDirectory(tmpPatchPath.getParent());
+                
                 Path patchedProjectPath = null;
                 if (!replaceFiles) {
                     patchedProjectPath = tmpProjectPath;
@@ -1072,46 +1101,91 @@ public class PatcherWindow extends Application {
                     e1.printStackTrace();
                 }
 
-                ArrayList<Path> patchedFiles = new ArrayList<>();
+                Map<Path, Path> patchedFiles = new HashMap<>();
                 for (Path filePath: fileVisitor.walkFileTree(patchedProjectPath)) {
-                    patchedFiles.add(patchedProjectPath.relativize(filePath));
+                    patchedFiles.put(patchedProjectPath.relativize(filePath), filePath);
                 }
 
                 Platform.runLater(() -> {
-                    statusLabel.setText("Status: checking project integrity");
+                    statusLabel.setText("Status: checking project integrity, this can take awhile");
                 });
-                Map<String, ArrayList<Path>> integrityResult = IntegrityChecker.checkRemoteIntegrity(patchedFiles, toVersion);
+                Map<String, ArrayList<Path>> integrityResult = IntegrityChecker.checkRemoteIntegrity(patchedFiles, projectPath, toVersion);
                 AtomicLong fileCounter = new AtomicLong(0);
+                checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("deleted")) {
+                    checkoutDump.append("deleted ").append(file).append(System.lineSeparator());
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: deleting " + file.toString());
                         courgettesAmountLabel.setText("Active Courgette instances:\t0" +
                                 System.lineSeparator() + "Files remains:\t" +
                                 (integrityResult.get("deleted").size() - fileCounter.getAndIncrement()));
                     });
-                    Files.deleteIfExists(Paths.get(patchedProjectPath.toString(), file.toString()));
+                    // Files.deleteIfExists(file.toString());
                 }
                 fileCounter.set(0);
+                checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("failed")) {
+                    checkoutDump.append("\tre-download ").append(file).append(System.lineSeparator());
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: downloading " + file.toString());
                         courgettesAmountLabel.setText("Active Courgette instances:\t0" +
                                 System.lineSeparator() + "Files remains:\t" +
                                 (integrityResult.get("failed").size() - fileCounter.getAndIncrement()));
                     });
-                    FilesEndpoint.getRoot(Paths.get(patchedProjectPath.toString(), file.toString()), Map.of("location", file.toString()));
+                    
+                    // FilesEndpoint.getRoot(file, Map.of("location", file.toString()));
+                    if (!toVersion.equals(rootVersion.getVersionString())) {
+                        // TODO: checkout from root file to toVersion
+                    }
                 }
+                fileCounter.set(0);
+                checkoutDump.append("unchanged files amount ").append(integrityResult.get("unchanged").size()).append(System.lineSeparator());
+                for (Path oldFile: integrityResult.get("unchanged")) {
+                    checkoutDump.append("\tmoving unchanged files ").append(oldFile).append(System.lineSeparator());
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Status: moving " + oldFile.toString());
+                        courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                System.lineSeparator() + "Files remains:\t" +
+                                (integrityResult.get("unchanged").size() - fileCounter.getAndIncrement()));
+                    });
+
+                    Files.copy(oldFile, Paths.get(patchedProjectPath.toString(), projectPath.relativize(oldFile).toString()), StandardCopyOption.REPLACE_EXISTING);
+                }
+                fileCounter.set(0);
+                checkoutDump.append("missing files amount ").append(integrityResult.get("missing").size()).append(System.lineSeparator());
+                for (Path remoteFile: integrityResult.get("missing")) {
+                    checkoutDump.append("\tre-download ").append(remoteFile).append(System.lineSeparator());
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Status: downloading " + remoteFile.toString());
+                        courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                System.lineSeparator() + "Files remains:\t" +
+                                (integrityResult.get("missing").size() - fileCounter.getAndIncrement()));
+                    });
+                    
+                    FilesEndpoint.getRoot(Paths.get(patchedProjectPath.toString(), remoteFile.toString()), Map.of("location", remoteFile.toString()));
+                    if (!toVersion.equals(rootVersion.getVersionString())) {
+                        // TODO: checkout from root file to toVersion
+                    }
+                }
+
+                CourgetteHandler.setTotalThreadsAmount(0);
 
                 Instant finish = Instant.now();
                 StringBuilder str = new StringBuilder("Status: done ");
                 str.append(ChronoUnit.MINUTES.between(start, finish));
+                str.append(" mins ");
                 str.append(ChronoUnit.SECONDS.between(start, finish) - ChronoUnit.MINUTES.between(start, finish)*60);
-                str.append(" mins");
+                str.append(" secs");
                 Platform.runLater(() -> {
                     statusLabel.setText(str.toString());
                 });
 
                 button.setDisable(false);
+                
+                BufferedWriter writer = new BufferedWriter(new FileWriter("dump.txt"));
+                writer.write(checkoutDump.toString());
+                writer.close();
+
                 return null;
             }
         };
