@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -55,6 +56,7 @@ import patcher.utils.data_utils.IntegrityChecker;
 import patcher.utils.files_utils.Directories;
 import patcher.utils.patching_utils.RunCourgette;
 import patcher.remote_api.endpoints.FilesEndpoint;
+import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
 import patcher.remote_api.entities.VersionEntity;
 import patcher.utils.remote_utils.Connector;
@@ -698,7 +700,7 @@ public class PatcherWindow extends Application {
             applyPatchButton.setDisable(true);
             projectPath = Paths.get(projectPathField.getText());
             patchPath = Paths.get(patchPathField.getText());
-            Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
+            Path tmpProjectPath = projectPath.getParent().resolve("patched_tmp").resolve(projectPath.getFileName());
 
             if (!authWindow.config.getJSONObject(RunCourgette.os).has("localPatchingInfo")) {
                 authWindow.config.getJSONObject(RunCourgette.os).put("localPatchingInfo", new JSONObject());
@@ -721,12 +723,12 @@ public class PatcherWindow extends Application {
                 e1.printStackTrace();
             }
 
-            ArrayList<Path> oldFiles = new ArrayList<>();
-            ArrayList<Path> patchFiles = new ArrayList<>();
+            List<Path> oldFiles = null;
+            List<Path> patchFiles = null;
 
             try {
-                oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
-                patchFiles = new ArrayList<>(fileVisitor.walkFileTree(patchPath));
+                oldFiles = fileVisitor.walkFileTree(projectPath);
+                patchFiles = fileVisitor.walkFileTree(patchPath);
             } catch (IOException e1) {
                 AlertWindow.showErrorWindow("Cannot walk project file tree");
                 e1.printStackTrace();
@@ -739,15 +741,16 @@ public class PatcherWindow extends Application {
     
             for (Path patchFile: patchFiles) {
                 relativePatchPath = patchPath.relativize(patchFile);
-                newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
+                newPath = tmpProjectPath.resolve(relativePatchPath.toString().equals("") ?
                         Paths.get("..", "..", "..", tmpProjectPath.getParent().getFileName().toString(),
                                 tmpProjectPath.getFileName().toString()).toString() :
                         relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
-                oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString().equals("") ? "" :
+                oldPath = projectPath.resolve(relativePatchPath.toString().equals("") ? "" :
                         relativePatchPath.toString().substring(0, relativePatchPath.toString().length() - "_patch".length())).normalize();
 
                 if (!oldFiles.contains(oldPath)) {
                     try {
+                        oldPath.getParent().toFile().mkdirs();
                         Files.createFile(oldPath);
                         Files.write(oldPath, emptyData);
                     } catch (IOException e1) {
@@ -890,7 +893,7 @@ public class PatcherWindow extends Application {
             remoteGenPatchButton.setDisable(true);
             remoteOldProjectPath = Paths.get(remoteOldProjectPathField.getText());
             remoteNewProjectPath = Paths.get(remoteNewProjectPathField.getText());
-            Path patchFolderPath = Paths.get(remoteNewProjectPath.getParent().toString(), "/tmp_patch");
+            Path patchFolderPath = remoteNewProjectPath.getParent().resolve("tmp_patch");
 
             if (!authWindow.config.getJSONObject(RunCourgette.os).has("remotePatchCreationInfo")) {
                 authWindow.config.getJSONObject(RunCourgette.os).put("remotePatchCreationInfo", new JSONObject());
@@ -936,8 +939,8 @@ public class PatcherWindow extends Application {
         button.setDisable(true);
         StringBuffer checkoutDump = new StringBuffer();
 
-        Path tmpProjectPath = Paths.get(projectPath.getParent().toString(), "patched_tmp", projectPath.getFileName().toString());
-        Path tmpPatchPath = Paths.get(projectPath.getParent().toString(), "patch_tmp", projectPath.getFileName().toString());
+        Path tmpProjectPath = projectPath.getParent().resolve("patched_tmp").resolve(projectPath.getFileName());
+        Path tmpPatchPath = projectPath.getParent().resolve("patch_tmp").resolve(projectPath.getFileName());
 
         if (!authWindow.config.getJSONObject(RunCourgette.os).has("remotePatchingInfo")) {
             authWindow.config.getJSONObject(RunCourgette.os).put("remotePatchingInfo", new JSONObject());
@@ -949,8 +952,8 @@ public class PatcherWindow extends Application {
         authWindow.saveConfig();
 
         String currentVersion = null;
-        if (Files.exists(Paths.get(projectPath.toString(), "config.json"))) {
-            File file = new File(Paths.get(projectPath.toString(), "config.json").toString());
+        if (Files.exists(projectPath.resolve("config.json"))) {
+            File file = new File(projectPath.resolve("config.json").toString());
             String content;
             try {
                 content = new String(Files.readAllBytes(Paths.get(file.toURI())));
@@ -970,7 +973,7 @@ public class PatcherWindow extends Application {
             @Override public Void call() throws InterruptedException, IOException {
 
                 Instant start = Instant.now();
-
+                AtomicLong counter = new AtomicLong(0);
                 JSONObject response = null;
                 try {
                     Platform.runLater(() -> {
@@ -983,26 +986,28 @@ public class PatcherWindow extends Application {
 
                 ArrayList<Path> subfolderSequence = new ArrayList<>();
 
+                Map<Path, ArrayList<Map<String, String>>> patchParams = new HashMap<>();
+
+                counter.set(0);
                 response.getJSONArray("files").forEach(fileItem -> {
                     JSONObject file = (JSONObject)fileItem;
                     file.getJSONArray("patches").forEach(patchItem -> {
                         JSONObject patch = (JSONObject)patchItem;
-                        Map<String, String> patchParams = new HashMap<>(
-                            Map.of(
-                                "v_from", patch.getString("version_from"),
-                                "v_to", patch.getString("version_to"),
-                                "file_location", file.getString("location")
-                            )
-                        );
                         try {
-                            Path subfolderPath = Paths.get(tmpPatchPath.toString(),
-                                    "from_" + patchParams.get("v_from") + "_to_" + patchParams.get("v_to"));
-                            if (!subfolderSequence.contains(subfolderPath))
+                            Path subfolderPath = tmpPatchPath.resolve(
+                                    "from_" + patch.getString("version_from") + "_to_" + patch.getString("version_to"));
+                            if (!subfolderSequence.contains(subfolderPath)) {
                                 subfolderSequence.add(subfolderPath);
-                            Platform.runLater(() -> {
-                                statusLabel.setText("Status: downloading patch " + patchParams.get("file_location"));
-                            });
-                            // PatchesEndpoint.getFile(patchPath, patchParams);
+                                patchParams.put(subfolderPath, new ArrayList<>());
+                            }
+
+                            patchParams.get(subfolderPath).add(new HashMap<>(
+                                Map.of(
+                                    "v_from", patch.getString("version_from"),
+                                    "v_to", patch.getString("version_to"),
+                                    "file_location", file.getString("location")
+                                )
+                            ));
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -1012,7 +1017,6 @@ public class PatcherWindow extends Application {
                 FileVisitor fileVisitor = new FileVisitor();
 
                 ArrayList<Path> oldFiles = new ArrayList<>();
-                ArrayList<Path> patchFiles = new ArrayList<>();
 
                 oldFiles = new ArrayList<>(fileVisitor.walkFileTree(projectPath));
                 checkoutDump.append("old files amount ").append(oldFiles.size()).append(System.lineSeparator());
@@ -1028,21 +1032,30 @@ public class PatcherWindow extends Application {
                 CourgetteHandler.setMAX_ACTIVE_COURGETTES_AMOUNT(20);
 
                 for (Path folder: subfolderSequence) {
-                    patchFiles = new ArrayList<>(fileVisitor.walkFileTree(folder));
-                    checkoutDump.append("patch ").append(folder).append(" files amount ")
-                            .append(patchFiles.size()).append(System.lineSeparator());
+                    counter.addAndGet(patchParams.get(folder).size());
+                }
 
-                    CourgetteHandler.setTotalThreadsAmount(patchFiles.size());
+                final long patchesAmount = counter.get();
+                CourgetteHandler.setTotalThreadsAmount((int)patchesAmount);
 
-                    for (Path patchFile: patchFiles) {
-                        relativePatchPath = folder.relativize(patchFile);
-                        newPath = Paths.get(tmpProjectPath.toString(), relativePatchPath.toString().equals("") ?
-                                Paths.get("..", "..", "..", tmpProjectPath.getFileName().toString()).toString() :
-                                relativePatchPath.toString()).normalize();
-                        oldPath = Paths.get(projectPath.toString(), relativePatchPath.toString()).normalize();
+                counter.set(0);
+                for (Path folder: subfolderSequence) {
+                    for (Map<String, String> patchParam: patchParams.get(folder)) {
+                        relativePatchPath = Paths.get(patchParam.get("file_location"));
+                        Path patchFile = folder.resolve(relativePatchPath.toString());
+                        newPath = tmpProjectPath.resolve(relativePatchPath.toString().equals("") ?
+                                Paths.get("..", "..", "..", tmpProjectPath.getFileName().toString()) :
+                                relativePatchPath).normalize();
+                        oldPath = projectPath.resolve(relativePatchPath).normalize();
+                        String statusStr = relativePatchPath.toString();
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: downloading " + statusStr);
+                        });
+                        PatchesEndpoint.getFile(folder.resolve(relativePatchPath), patchParam);
 
                         if (!oldFiles.contains(oldPath)) {
                             try {
+                                oldPath.getParent().toFile().mkdirs();
                                 Files.createFile(oldPath);
                                 Files.write(oldPath, emptyData);
                             } catch (IOException e1) {
@@ -1057,11 +1070,15 @@ public class PatcherWindow extends Application {
                         }
                         checkoutDump.append("\tpatching ").append(patchFile).append(System.lineSeparator());
                         CourgetteHandler thread = new CourgetteHandler();
-                        // thread.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
-                        //         replaceFiles, courgettesAmountLabel, false);
+                        thread.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
+                                false, courgettesAmountLabel, false);
                         threads.add(thread);
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: patching " + folder.relativize(patchFile).toString());
+                            courgettesAmountLabel.setText("Active Courgette instances:\t"
+                                    + CourgetteHandler.activeCount() + "" +
+                                    System.lineSeparator() + "Files remains:\t" +
+                                    (patchesAmount - counter.getAndIncrement()));
                         });
                         while (CourgetteHandler.activeCount() >= CourgetteHandler.getMAX_THREADS_AMOUNT()) {
                             try {
@@ -1087,15 +1104,15 @@ public class PatcherWindow extends Application {
                 if (!replaceFiles) {
                     patchedProjectPath = tmpProjectPath;
 
-                    Files.copy(Paths.get(projectPath.toString(), ".psheignore"),
-                            Paths.get(tmpProjectPath.toString(), ".psheignore"), StandardCopyOption.REPLACE_EXISTING);
+                    Files.copy(projectPath.resolve(".psheignore"),
+                            tmpProjectPath.resolve(".psheignore"), StandardCopyOption.REPLACE_EXISTING);
                 } else {
                     patchedProjectPath = projectPath;
                 }
 
                 JSONObject updatedConfig = new JSONObject().put("currentVersion", toVersion);
                 try {
-                    Directories.saveJSONFile(Paths.get(patchedProjectPath.toString(), "config.json"), updatedConfig);
+                    Directories.saveJSONFile(patchedProjectPath.resolve("config.json"), updatedConfig);
                 } catch (JSONException | IOException e1) {
                     AlertWindow.showErrorWindow("Cannot update project config file");
                     e1.printStackTrace();
@@ -1110,7 +1127,7 @@ public class PatcherWindow extends Application {
                     statusLabel.setText("Status: checking project integrity, this can take awhile");
                 });
                 Map<String, ArrayList<Path>> integrityResult = IntegrityChecker.checkRemoteIntegrity(patchedFiles, projectPath, toVersion);
-                AtomicLong fileCounter = new AtomicLong(0);
+                counter.set(0);
                 checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("deleted")) {
                     checkoutDump.append("deleted ").append(file).append(System.lineSeparator());
@@ -1118,11 +1135,11 @@ public class PatcherWindow extends Application {
                         statusLabel.setText("Status: deleting " + file.toString());
                         courgettesAmountLabel.setText("Active Courgette instances:\t0" +
                                 System.lineSeparator() + "Files remains:\t" +
-                                (integrityResult.get("deleted").size() - fileCounter.getAndIncrement()));
+                                (integrityResult.get("deleted").size() - counter.getAndIncrement()));
                     });
-                    // Files.deleteIfExists(file.toString());
+                    Files.deleteIfExists(file);
                 }
-                fileCounter.set(0);
+                counter.set(0);
                 checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("failed")) {
                     checkoutDump.append("\tre-download ").append(file).append(System.lineSeparator());
@@ -1130,28 +1147,32 @@ public class PatcherWindow extends Application {
                         statusLabel.setText("Status: downloading " + file.toString());
                         courgettesAmountLabel.setText("Active Courgette instances:\t0" +
                                 System.lineSeparator() + "Files remains:\t" +
-                                (integrityResult.get("failed").size() - fileCounter.getAndIncrement()));
+                                (integrityResult.get("failed").size() - counter.getAndIncrement()));
                     });
                     
-                    // FilesEndpoint.getRoot(file, Map.of("location", file.toString()));
+                    FilesEndpoint.getRoot(file, Map.of("location", file.toString()));
                     if (!toVersion.equals(rootVersion.getVersionString())) {
                         // TODO: checkout from root file to toVersion
                     }
                 }
-                fileCounter.set(0);
+                counter.set(0);
                 checkoutDump.append("unchanged files amount ").append(integrityResult.get("unchanged").size()).append(System.lineSeparator());
                 for (Path oldFile: integrityResult.get("unchanged")) {
                     checkoutDump.append("\tmoving unchanged files ").append(oldFile).append(System.lineSeparator());
+                    System.out.println("moving " + oldFile.toString() + " to "
+                            + patchedProjectPath.resolve(projectPath.relativize(oldFile)));
+                    String statusStr = patchedProjectPath.toString();
                     Platform.runLater(() -> {
-                        statusLabel.setText("Status: moving " + oldFile.toString());
+                        statusLabel.setText("Status: moving " + oldFile.toString() + " to "
+                                + Paths.get(statusStr, projectPath.relativize(oldFile).toString()));
                         courgettesAmountLabel.setText("Active Courgette instances:\t0" +
                                 System.lineSeparator() + "Files remains:\t" +
-                                (integrityResult.get("unchanged").size() - fileCounter.getAndIncrement()));
+                                (integrityResult.get("unchanged").size() - counter.getAndIncrement()));
                     });
 
-                    Files.copy(oldFile, Paths.get(patchedProjectPath.toString(), projectPath.relativize(oldFile).toString()), StandardCopyOption.REPLACE_EXISTING);
+                    Files.copy(oldFile, patchedProjectPath.resolve(projectPath.relativize(oldFile)), StandardCopyOption.REPLACE_EXISTING);
                 }
-                fileCounter.set(0);
+                counter.set(0);
                 checkoutDump.append("missing files amount ").append(integrityResult.get("missing").size()).append(System.lineSeparator());
                 for (Path remoteFile: integrityResult.get("missing")) {
                     checkoutDump.append("\tre-download ").append(remoteFile).append(System.lineSeparator());
@@ -1159,16 +1180,51 @@ public class PatcherWindow extends Application {
                         statusLabel.setText("Status: downloading " + remoteFile.toString());
                         courgettesAmountLabel.setText("Active Courgette instances:\t0" +
                                 System.lineSeparator() + "Files remains:\t" +
-                                (integrityResult.get("missing").size() - fileCounter.getAndIncrement()));
+                                (integrityResult.get("missing").size() - counter.getAndIncrement()));
                     });
                     
-                    FilesEndpoint.getRoot(Paths.get(patchedProjectPath.toString(), remoteFile.toString()), Map.of("location", remoteFile.toString()));
+                    FilesEndpoint.getRoot(patchedProjectPath.resolve(remoteFile), Map.of("location", remoteFile.toString()));
                     if (!toVersion.equals(rootVersion.getVersionString())) {
                         // TODO: checkout from root file to toVersion
                     }
                 }
 
                 CourgetteHandler.setTotalThreadsAmount(0);
+                if (replaceFiles) {
+                    counter.set(0);
+                    List<Path> totalPatchedFiles = fileVisitor.walkFileTree(patchedProjectPath);
+                    String pathString = patchedProjectPath.toString();
+                    for (Path file: totalPatchedFiles) {
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: updating " + Paths.get(pathString).relativize(file).toString());
+                            courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                    System.lineSeparator() + "Files remains:\t" +
+                                    (totalPatchedFiles.size() - counter.getAndIncrement()));
+                        });
+                        try {
+                            Files.copy(file, projectPath.resolve(patchedProjectPath.relativize(file)), StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    counter.set(0);
+                    for (Path file: integrityResult.get("deleted")) {
+                        Path targetFile = projectPath.resolve(Paths.get(pathString).relativize(file));
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: deleting " + file.toString());
+                            courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                    System.lineSeparator() + "Files remains:\t" +
+                                    (integrityResult.get("deleted").size() - counter.getAndIncrement()));
+                        });
+                        Files.deleteIfExists(targetFile);
+                    }
+                }
+
+                Platform.runLater(() -> {
+                    courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                            System.lineSeparator() + "Files remains:\t0");
+                });
 
                 Instant finish = Instant.now();
                 StringBuilder str = new StringBuilder("Status: done ");
@@ -1200,9 +1256,9 @@ public class PatcherWindow extends Application {
         byte[] emptyData = {0};
         for (Path oldFile: oldFiles) {
             relativeOldPath = oldProjectPath.relativize(oldFile);
-            newPath = Paths.get(newProjectPath.toString(), relativeOldPath.toString()).normalize();
-            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder,
-                    (relativeOldPath.toString().equals("") ? oldFile.getFileName() : relativeOldPath.toString()) + "_patch").normalize();
+            newPath = newProjectPath.resolve(relativeOldPath).normalize();
+            patchFile = patchFolderPath.resolve(patchSubfolder)
+                    .resolve((relativeOldPath.toString().equals("") ? oldFile.getFileName() : relativeOldPath.toString()) + "_patch").normalize();
 
             if (oldFile.toFile().length() <= 1 || newPath.toFile().length() <= 1) {
                 continue;
@@ -1221,11 +1277,12 @@ public class PatcherWindow extends Application {
         Path oldPath;
         for (Path newFile: newFiles) {
             relativeNewPath = newProjectPath.relativize(newFile);
-            oldPath = Paths.get(oldProjectPath.toString(), relativeNewPath.toString()).normalize();
-            patchFile = Paths.get(patchFolderPath.toString(), patchSubfolder, relativeNewPath.toString() + "_patch").normalize();
+            oldPath = oldProjectPath.resolve(relativeNewPath).normalize();
+            patchFile = patchFolderPath.resolve(patchSubfolder).resolve(relativeNewPath.toString() + "_patch").normalize();
 
             if (!oldFiles.contains(oldPath)) {
                 try {
+                    oldPath.getParent().toFile().mkdirs();
                     Files.createFile(oldPath);
                     Files.write(oldPath, emptyData);
                     Files.createDirectories(patchFile.getParent());
