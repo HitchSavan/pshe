@@ -939,8 +939,10 @@ public class PatcherWindow extends Application {
         button.setDisable(true);
         StringBuffer checkoutDump = new StringBuffer();
 
-        Path tmpProjectPath = projectPath.getParent().resolve("patched_tmp").resolve(projectPath.getFileName());
-        Path tmpPatchPath = projectPath.getParent().resolve("patch_tmp").resolve(projectPath.getFileName());
+        Path projectParentFolder = projectPath.getParent();
+
+        Path tmpProjectPath = projectParentFolder.resolve("patched_tmp").resolve(projectPath.getFileName());
+        Path tmpPatchPath = projectParentFolder.resolve("patch_tmp").resolve(projectPath.getFileName());
 
         if (!authWindow.config.getJSONObject(RunCourgette.os).has("remotePatchingInfo")) {
             authWindow.config.getJSONObject(RunCourgette.os).put("remotePatchingInfo", new JSONObject());
@@ -1070,7 +1072,8 @@ public class PatcherWindow extends Application {
                         }
                         checkoutDump.append("\tpatching ").append(patchFile).append(System.lineSeparator());
                         CourgetteHandler thread = new CourgetteHandler();
-                        thread.applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
+                        thread.applyPatch(projectParentFolder.relativize(oldPath).toString(),
+                                projectParentFolder.relativize(newPath).toString(), patchFile.toString(),
                                 false, courgettesAmountLabel, false);
                         threads.add(thread);
                         Platform.runLater(() -> {
