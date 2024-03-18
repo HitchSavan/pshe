@@ -1,6 +1,9 @@
 package user_client.utils;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 import javafx.application.Platform;
 import javafx.scene.control.Label;
@@ -107,5 +110,52 @@ public class CourgetteHandler extends Thread {
         decreaseThreadsAmount();
         // decreaseTotalThreadsAmount();
         updateComponent(updatingComponent);
+    }
+
+    public static void generatePatch(Path patchFolderPath, Path oldProjectPath, Path newProjectPath, List<Path> oldFiles,
+            List<Path> newFiles, String patchSubfolder, Label updatingComponent) {
+        Path relativeOldPath;
+        Path newPath;
+        Path patchFile;
+        byte[] emptyData = {0};
+        for (Path oldFile: oldFiles) {
+            relativeOldPath = oldProjectPath.relativize(oldFile);
+            newPath = newProjectPath.resolve(relativeOldPath).normalize();
+            patchFile = patchFolderPath.resolve(patchSubfolder)
+                    .resolve((relativeOldPath.toString().equals("") ? oldFile.getFileName() : relativeOldPath.toString()) + "_patch").normalize();
+
+            if (oldFile.toFile().length() <= 1 || newPath.toFile().length() <= 1) {
+                continue;
+            }
+
+            try {
+                Files.createDirectories(patchFile.getParent());
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            new CourgetteHandler().generatePatch(oldFile.toString(), newPath.toString(),
+                    patchFile.toString(), updatingComponent, false);
+        }
+
+        Path relativeNewPath;
+        Path oldPath;
+        for (Path newFile: newFiles) {
+            relativeNewPath = newProjectPath.relativize(newFile);
+            oldPath = oldProjectPath.resolve(relativeNewPath).normalize();
+            patchFile = patchFolderPath.resolve(patchSubfolder).resolve(relativeNewPath.toString() + "_patch").normalize();
+
+            if (!oldFiles.contains(oldPath)) {
+                try {
+                    oldPath.getParent().toFile().mkdirs();
+                    Files.createFile(oldPath);
+                    Files.write(oldPath, emptyData);
+                    Files.createDirectories(patchFile.getParent());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                new CourgetteHandler().generatePatch(oldPath.toString(), newFile.toString(),
+                        patchFile.toString(),updatingComponent, false);
+            }
+        }
     }
 }
