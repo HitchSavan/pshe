@@ -18,11 +18,12 @@ public class CourgetteHandler extends Thread {
     private boolean redirectOutput;
     
     @Getter @Setter
-    private static int MAX_THREADS_AMOUNT = 30;
+    private static int MAX_THREADS_AMOUNT = 1;
     @Getter @Setter
-    private static int MAX_ACTIVE_COURGETTES_AMOUNT = 20;
+    private static int MAX_ACTIVE_COURGETTES_AMOUNT = 1;
     private static int currentThreadsAmount = 0;
     private static int totalThreadsAmount = 0;
+    private static int remainingFilesAmount = 0;
 
     private synchronized static int currentThreadsAmount() {
         return currentThreadsAmount;
@@ -46,6 +47,19 @@ public class CourgetteHandler extends Thread {
     public synchronized static void decreaseTotalThreadsAmount() {
         --totalThreadsAmount;
     }
+    
+    public synchronized static int remainingFilesAmount() {
+        return remainingFilesAmount;
+    }
+    public synchronized static void setRemainingFilesAmount(int _remainingFilesAmount) {
+        remainingFilesAmount = _remainingFilesAmount;
+    }
+    public synchronized static void increaseRemainingFilesAmount() {
+        ++remainingFilesAmount;
+    }
+    public synchronized static void decreaseRemainingFilesAmount() {
+        --remainingFilesAmount;
+    }
 
     // TODO: disable exec button
     private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles,
@@ -64,7 +78,7 @@ public class CourgetteHandler extends Thread {
         if (updatingComponent != null) {
             Platform.runLater(() -> {
                 updatingComponent.setText("Active Courgette instances:\t" + currentThreadsAmount()
-                        + System.lineSeparator() + "Files remains:\t" + totalThreadsAmount());
+                        + System.lineSeparator() + "Files remains:\t" + remainingFilesAmount());
             });
         }
     }
@@ -81,8 +95,7 @@ public class CourgetteHandler extends Thread {
 
     @Override
     public void run() {
-        // increaseTotalThreadsAmount();
-        while (currentThreadsAmount() >= MAX_ACTIVE_COURGETTES_AMOUNT) {
+        while (currentThreadsAmount() > MAX_ACTIVE_COURGETTES_AMOUNT) {
             try {
                 sleep(10);
             } catch (InterruptedException e) {
@@ -105,7 +118,6 @@ public class CourgetteHandler extends Thread {
             e.printStackTrace();
         }
         decreaseThreadsAmount();
-        // decreaseTotalThreadsAmount();
         updateComponent(updatingComponent);
     }
 }
