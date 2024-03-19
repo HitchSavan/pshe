@@ -3,10 +3,8 @@ package user_client.gui;
 import javafx.scene.control.Button;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
-import javax.swing.JFileChooser;
 
 import org.json.JSONObject;
 
@@ -24,7 +22,6 @@ import javafx.stage.Stage;
 import patcher.utils.files_utils.Directories;
 import patcher.utils.patching_utils.RunCourgette;
 import patcher.remote_api.endpoints.ServiceEndpoint;
-import patcher.remote_api.entities.VersionEntity;
 import patcher.utils.remote_utils.Connector;
 import user_client.gui.tabs.local.ApplyTab;
 import user_client.gui.tabs.local.GenerateTab;
@@ -59,25 +56,10 @@ public class PatcherWindow extends Application {
     VBox applyPatchTabContent;
     VBox genPatchTabContent;
     VBox historyTabContent;
-    
-    VersionEntity rootVersion = null;
-    Button checkoutButton;
-
-    JFileChooser fileChooser;
 
     Button applyPatchLoginButton;
     Button historyLoginButton;
     Button genPatchLoginButton;
-
-    Path projectPath;
-    Path patchPath;
-    Path oldProjectPath;
-    Path newProjectPath;
-    Path patchFolderPath;
-
-    Path remoteProjectPath;
-    Path remoteOldProjectPath;
-    Path remoteNewProjectPath;
     
     public static void runApp(String[] args) {
         System.setProperty("javafx.preloader", CustomPreloader.class.getCanonicalName());
@@ -103,8 +85,8 @@ public class PatcherWindow extends Application {
     }
 
     private void setupFileUi() {
-        applyTab = new ApplyTab(projectPath, patchPath, authWindow.config);
-        genTab = new GenerateTab(oldProjectPath, newProjectPath, patchFolderPath, authWindow.config);
+        applyTab = new ApplyTab(authWindow.config);
+        genTab = new GenerateTab(authWindow.config);
         
         fileTabs = new TabPane();
         addTab(fileTabs, "Patching", applyTab);
@@ -139,9 +121,9 @@ public class PatcherWindow extends Application {
     }
 
     private void setupRemoteUi() {
-        remoteApplyTab.setupUi(projectPath, patchPath, applyPatchTabContent, authWindow.config);
-        historyTab.setupUi(projectPath, historyTabContent, authWindow.config, rootVersion, List.of(remoteApplyTab.patchToRootButton));
-        remoteGenTab.setupUi(oldProjectPath, newProjectPath, patchPath, genPatchTabContent, authWindow.config);
+        applyPatchTabContent = remoteApplyTab.setupUi(authWindow.config);
+        historyTabContent = historyTab.setupUi(authWindow.config, List.of(remoteApplyTab.patchToRootButton));
+        genPatchTabContent = remoteGenTab.setupUi(authWindow.config);
     }
 
     private void setupMainWindowUi() {
@@ -195,8 +177,8 @@ public class PatcherWindow extends Application {
     }
 
     private void setupEvents() {
-        applyTab.setupEvents(projectPath, patchPath, authWindow.config, authWindow);
-        genTab.setupEvents(oldProjectPath, newProjectPath, patchFolderPath, authWindow.config, authWindow);
+        applyTab.setupEvents(authWindow.config, authWindow);
+        genTab.setupEvents(authWindow.config, authWindow);
 
         applyPatchLoginButton.setOnAction(e -> {
             if (authWindow.isShowing())
@@ -256,8 +238,8 @@ public class PatcherWindow extends Application {
     }
 
     private void setupRemoteEvents() {
-        remoteApplyTab.setupEvents(projectPath, patchPath, rootVersion.getVersionString(), authWindow.config, authWindow);
-        remoteGenTab.setupEvents(oldProjectPath, newProjectPath, patchPath, rootVersion.getVersionString(), authWindow.config, authWindow);
+        remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
+        remoteGenTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
         historyTab.setupEvents();
     }
 

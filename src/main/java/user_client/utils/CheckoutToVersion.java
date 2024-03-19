@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -26,6 +27,9 @@ import javafx.scene.control.Label;
 import patcher.remote_api.endpoints.FilesEndpoint;
 import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
+import patcher.remote_api.entities.VersionEntity;
+import patcher.remote_api.entities.VersionFileEntity;
+import patcher.utils.data_utils.DataEncoder;
 import patcher.utils.data_utils.IntegrityChecker;
 import patcher.utils.files_utils.Directories;
 import patcher.utils.files_utils.FileVisitor;
@@ -65,14 +69,15 @@ public class CheckoutToVersion {
                 ee.printStackTrace();
                 return;
             }
+        } else {
+            AlertWindow.showErrorWindow("Cannot open project config file");
+            button.setDisable(false);
         }
 
-        Map<String, String> params = new HashMap<>();
-        params.put("v_from", currentVersion);
-        params.put("v_to", toVersion);
+        Map<String, String> params = Map.of("v_from", currentVersion, "v_to", toVersion);
 
         Task<Void> task = new Task<>() {
-            @Override public Void call() throws InterruptedException, IOException {
+            @Override public Void call() throws InterruptedException, IOException, NoSuchAlgorithmException, JSONException {
 
                 Instant start = Instant.now();
                 AtomicLong counter = new AtomicLong(0);
@@ -130,7 +135,7 @@ public class CheckoutToVersion {
 
                 List<CourgetteHandler> threads = new ArrayList<>();
 
-                CourgetteHandler.setMAX_THREADS_AMOUNT(30);
+                CourgetteHandler.setMAX_THREADS_AMOUNT(20);
                 CourgetteHandler.setMAX_ACTIVE_COURGETTES_AMOUNT(20);
 
                 for (Path folder: subfolderSequence) {
@@ -138,7 +143,7 @@ public class CheckoutToVersion {
                 }
 
                 final long patchesAmount = counter.get();
-                CourgetteHandler.setTotalThreadsAmount((int)patchesAmount);
+                CourgetteHandler.setRemainingFilesAmount((int)patchesAmount);
 
                 counter.set(0);
                 for (Path folder: subfolderSequence) {
@@ -153,8 +158,20 @@ public class CheckoutToVersion {
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: downloading " + statusStr);
                         });
-                        PatchesEndpoint.getFile(folder.resolve(relativePatchPath), patchParam);
+                        PatchesEndpoint.getFile(patchFile, patchParam);
 
+                        JSONObject patchInfoResponse = PatchesEndpoint.getInfo(patchParam);
+                        if (DataEncoder.getByteSize(patchFile) == patchInfoResponse.getJSONObject("patch_file").getLong("patch_size")) {
+                            if (!IntegrityChecker.compareChecksum(patchFile, patchInfoResponse.getJSONObject("patch_file").getString("patch_checksum"))) {
+                                System.out.print("FAILED CHECKSUM FOR PATCH ");
+                                System.out.println(patchFile);
+                                System.exit(4);
+                            }
+                        } else {
+                            System.out.print("FAILED BYTESIZE FOR PATCH ");
+                            System.out.println(patchFile);
+                            System.exit(5);
+                        }
                         if (!oldFiles.contains(oldPath)) {
                             try {
                                 oldPath.getParent().toFile().mkdirs();
@@ -172,26 +189,11 @@ public class CheckoutToVersion {
                         }
                         checkoutDump.append("\tpatching ").append(patchFile).append(System.lineSeparator());
                         CourgetteHandler thread = new CourgetteHandler();
-                        thread.applyPatch(projectParentFolder.relativize(oldPath).toString(),
-                                projectParentFolder.relativize(newPath).toString(), patchFile.toString(),
-                                false, courgettesAmountLabel, false);
+                        thread.applyPatch(oldPath, newPath, patchFile, projectPath, false, courgettesAmountLabel, true);
                         threads.add(thread);
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: patching " + folder.relativize(patchFile).toString());
-                            courgettesAmountLabel.setText("Active Courgette instances:\t"
-                                    + CourgetteHandler.activeCount() + "" +
-                                    System.lineSeparator() + "Files remains:\t" +
-                                    (patchesAmount - counter.getAndIncrement()));
                         });
-                        while (CourgetteHandler.activeCount() >= CourgetteHandler.getMAX_THREADS_AMOUNT()) {
-                            try {
-                                Thread.sleep(10);
-                            } catch (InterruptedException e) {
-                                AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
-                                e.printStackTrace();
-                            }
-                        }
-                        CourgetteHandler.decreaseTotalThreadsAmount();
                     }
 
                     for (CourgetteHandler thread: threads) {
@@ -229,19 +231,7 @@ public class CheckoutToVersion {
                 Platform.runLater(() -> {
                     statusLabel.setText("Status: checking project integrity, this can take awhile");
                 });
-                Map<String, ArrayList<Path>> integrityResult = IntegrityChecker.checkRemoteIntegrity(patchedFiles, projectPath, toVersion);
-                counter.set(0);
-                checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
-                for (Path file: integrityResult.get("deleted")) {
-                    checkoutDump.append("deleted ").append(file).append(System.lineSeparator());
-                    Platform.runLater(() -> {
-                        statusLabel.setText("Status: deleting " + file.toString());
-                        courgettesAmountLabel.setText("Active Courgette instances:\t0" +
-                                System.lineSeparator() + "Files remains:\t" +
-                                (integrityResult.get("deleted").size() - counter.getAndIncrement()));
-                    });
-                    Files.deleteIfExists(file);
-                }
+                Map<String, List<Path>> integrityResult = checkProjectIntegrity(patchedFiles, projectPath, toVersion, courgettesAmountLabel);
                 counter.set(0);
                 checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("failed")) {
@@ -256,25 +246,57 @@ public class CheckoutToVersion {
                     FilesEndpoint.getRoot(file, Map.of("location", file.toString()));
                     if (!toVersion.equals(rootVersion)) {
                         // TODO: checkout from root file to toVersion
+                        response = VersionsEndpoint.getSwitch(Map.of());
                     }
                 }
-                counter.set(0);
-                checkoutDump.append("unchanged files amount ").append(integrityResult.get("unchanged").size()).append(System.lineSeparator());
-                for (Path oldFile: integrityResult.get("unchanged")) {
-                    checkoutDump.append("\tmoving unchanged files ").append(oldFile).append(System.lineSeparator());
-                    System.out.println("moving " + oldFile.toString() + " to "
-                            + patchedProjectPath.resolve(projectPath.relativize(oldFile)));
-                    String statusStr = patchedProjectPath.toString();
-                    Platform.runLater(() -> {
-                        statusLabel.setText("Status: moving " + oldFile.toString() + " to "
-                                + Paths.get(statusStr, projectPath.relativize(oldFile).toString()));
-                        courgettesAmountLabel.setText("Active Courgette instances:\t0" +
-                                System.lineSeparator() + "Files remains:\t" +
-                                (integrityResult.get("unchanged").size() - counter.getAndIncrement()));
-                    });
+                if (!replaceFiles) {
+                    counter.set(0);
+                    checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
+                    for (Path file: integrityResult.get("deleted")) {
+                        checkoutDump.append("deleted ").append(file).append(System.lineSeparator());
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: deleting " + file.toString());
+                            courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                    System.lineSeparator() + "Files remains:\t" +
+                                    (integrityResult.get("deleted").size() - counter.getAndIncrement()));
+                        });
+                        Files.deleteIfExists(file);
+                    }
 
-                    Files.copy(oldFile, patchedProjectPath.resolve(projectPath.relativize(oldFile)), StandardCopyOption.REPLACE_EXISTING);
+                    counter.set(0);
+                    checkoutDump.append("unchanged files amount ").append(integrityResult.get("unchanged").size()).append(System.lineSeparator());
+                    for (Path oldFile: integrityResult.get("unchanged")) {
+                        checkoutDump.append("\tmoving unchanged files ").append(oldFile).append(System.lineSeparator());
+                        System.out.println("moving " + oldFile.toString() + " to "
+                                + patchedProjectPath.resolve(projectPath.relativize(oldFile)));
+                        String statusStr = patchedProjectPath.toString();
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: moving " + oldFile.toString() + " to "
+                                    + Paths.get(statusStr, projectPath.relativize(oldFile).toString()));
+                            courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                    System.lineSeparator() + "Files remains:\t" +
+                                    (integrityResult.get("unchanged").size() - counter.getAndIncrement()));
+                        });
+
+                        patchedProjectPath.resolve(projectPath.relativize(oldFile)).getParent().toFile().mkdirs();
+                        Files.copy(oldFile, patchedProjectPath.resolve(projectPath.relativize(oldFile)), StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } else {
+                    counter.set(0);
+                    checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
+                    for (Path file: integrityResult.get("deleted")) {
+                        Path deletingFile = projectPath.resolve(patchedProjectPath.relativize(file));
+                        checkoutDump.append("deleted ").append(deletingFile).append(System.lineSeparator());
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: deleting " + deletingFile.toString());
+                            courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                                    System.lineSeparator() + "Files remains:\t" +
+                                    (integrityResult.get("deleted").size() - counter.getAndIncrement()));
+                        });
+                        Files.deleteIfExists(deletingFile);
+                    }
                 }
+
                 counter.set(0);
                 checkoutDump.append("missing files amount ").append(integrityResult.get("missing").size()).append(System.lineSeparator());
                 for (Path remoteFile: integrityResult.get("missing")) {
@@ -292,7 +314,7 @@ public class CheckoutToVersion {
                     }
                 }
 
-                CourgetteHandler.setTotalThreadsAmount(0);
+                CourgetteHandler.setRemainingFilesAmount(0);
                 if (replaceFiles) {
                     counter.set(0);
                     List<Path> totalPatchedFiles = fileVisitor.walkFileTree(patchedProjectPath);
@@ -305,6 +327,7 @@ public class CheckoutToVersion {
                                     (totalPatchedFiles.size() - counter.getAndIncrement()));
                         });
                         try {
+                            projectPath.resolve(patchedProjectPath.relativize(file)).getParent().toFile().mkdirs();
                             Files.copy(file, projectPath.resolve(patchedProjectPath.relativize(file)), StandardCopyOption.REPLACE_EXISTING);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -322,6 +345,7 @@ public class CheckoutToVersion {
                         });
                         Files.deleteIfExists(targetFile);
                     }
+                    Files.deleteIfExists(patchedProjectPath);
                 }
 
                 Platform.runLater(() -> {
@@ -349,5 +373,42 @@ public class CheckoutToVersion {
             }
         };
         new Thread(task).start();
+    }
+
+    public static Map<String, List<Path>> checkProjectIntegrity(
+            Map<Path, Path> patchedFiles, Path oldProjectPath, String version, Label courgettesAmountLabel) throws IOException {
+
+        Map<Path, VersionFileEntity> versionFiles = new VersionEntity(VersionsEndpoint.getVersions(Map.of("v", version)).getJSONObject("version")).getFiles();
+
+        List<Path> failedFiles = new ArrayList<>();
+        List<Path> missingFiles = new ArrayList<>();
+        List<Path> deletedFiles = new ArrayList<>();
+        List<Path> unchangedFiles = new ArrayList<>();
+
+        AtomicLong counter = new AtomicLong(0);
+        patchedFiles.forEach((relativeFile, file) -> {
+            IntegrityChecker.checkLocalIntegrity(file, relativeFile, failedFiles, deletedFiles, versionFiles);
+            Platform.runLater(() -> {
+                courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                        System.lineSeparator() + "Files remains:\t" + (patchedFiles.size() + versionFiles.size() - counter.getAndIncrement()));
+            });
+        });
+
+        versionFiles.keySet().forEach(remoteFile -> {
+            Path file = oldProjectPath.resolve(remoteFile.toString());
+            IntegrityChecker.checkRemoteIntegrity(file, remoteFile, patchedFiles, unchangedFiles, missingFiles, versionFiles);
+            Platform.runLater(() -> {
+                courgettesAmountLabel.setText("Active Courgette instances:\t0" +
+                        System.lineSeparator() + "Files remains:\t" + (patchedFiles.size() + versionFiles.size() - counter.getAndIncrement()));
+            });
+        });
+
+        Map<String, List<Path>> result = new HashMap<>(
+            Map.of("failed", failedFiles,
+                    "missing", missingFiles,
+                    "deleted", deletedFiles,
+                    "unchanged", unchangedFiles));
+
+        return result;
     }
 }

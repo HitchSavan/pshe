@@ -13,9 +13,10 @@ import patcher.utils.patching_utils.Patcher;
 
 public class CourgetteHandler extends Thread {
     private Label updatingComponent;
-    private String oldFile;
-    private String newPath;
-    private String patchFile;
+    private Path oldFile;
+    private Path newPath;
+    private Path patchFile;
+    private Path projectPath;
     private boolean replaceFiles;
     private boolean generate;
     private boolean redirectOutput;
@@ -65,15 +66,25 @@ public class CourgetteHandler extends Thread {
     }
 
     // TODO: disable exec button
-    private void init(String oldFile, String newPath, String patchFile, boolean replaceFiles,
+    private void init(Path oldFile, Path newPath, Path patchFile, Path projectPath, boolean replaceFiles,
             Label updatingComponent, boolean generate, boolean redirectOutput) {
         this.updatingComponent = updatingComponent;
         this.oldFile = oldFile;
         this.newPath = newPath;
         this.patchFile = patchFile;
+        this.projectPath = projectPath;
         this.replaceFiles = replaceFiles;
         this.redirectOutput = redirectOutput;
         this.generate = generate;
+        CourgetteHandler.increaseTotalThreadsAmount();
+        while (CourgetteHandler.totalThreadsAmount() >= CourgetteHandler.getMAX_THREADS_AMOUNT()) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
+                e.printStackTrace();
+            }
+        }
         start();
     }
 
@@ -86,14 +97,14 @@ public class CourgetteHandler extends Thread {
         }
     }
     
-    public void generatePatch(String oldFile, String newPath, String patchFile,
+    public void generatePatch(Path oldFile, Path newPath, Path patchFile, Path projectPath,
             Label updatingComponent, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, false, updatingComponent, true, redirectOutput);
+        init(oldFile, newPath, patchFile, projectPath, false, updatingComponent, true, redirectOutput);
     }
     
-    public void applyPatch(String oldFile, String newPath, String patchFile, boolean replaceFiles,
-            Label updatingComponent, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, replaceFiles, updatingComponent, false, redirectOutput);
+    public void applyPatch(Path oldFile, Path newPath, Path patchFile, Path projectPath,
+            boolean replaceFiles, Label updatingComponent, boolean redirectOutput) {
+        init(oldFile, newPath, patchFile, projectPath, replaceFiles, updatingComponent, false, redirectOutput);
     }
 
     @Override
@@ -112,15 +123,17 @@ public class CourgetteHandler extends Thread {
 
         try {
             if (generate) {
-                Patcher.generatePatch(oldFile, newPath, patchFile, redirectOutput);
+                Patcher.generatePatch(oldFile, newPath, patchFile, projectPath, redirectOutput);
             } else {
-                Patcher.applyPatch(oldFile, newPath, patchFile, replaceFiles, redirectOutput);
+                Patcher.applyPatch(oldFile, newPath, patchFile, projectPath, replaceFiles, redirectOutput);
             }
         } catch (IOException | InterruptedException e) {
             AlertWindow.showErrorWindow("Cannot run courgette instance");
             e.printStackTrace();
         }
         decreaseThreadsAmount();
+        decreaseTotalThreadsAmount();
+        decreaseRemainingFilesAmount();
         updateComponent(updatingComponent);
     }
 
@@ -145,8 +158,7 @@ public class CourgetteHandler extends Thread {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            new CourgetteHandler().generatePatch(oldFile.toString(), newPath.toString(),
-                    patchFile.toString(), updatingComponent, false);
+            new CourgetteHandler().generatePatch(oldFile, newPath, patchFile, oldProjectPath, updatingComponent, false);
         }
 
         Path relativeNewPath;
@@ -165,8 +177,7 @@ public class CourgetteHandler extends Thread {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                new CourgetteHandler().generatePatch(oldPath.toString(), newFile.toString(),
-                        patchFile.toString(),updatingComponent, false);
+                new CourgetteHandler().generatePatch(oldPath, newFile, patchFile, oldProjectPath, updatingComponent, false);
             }
         }
     }

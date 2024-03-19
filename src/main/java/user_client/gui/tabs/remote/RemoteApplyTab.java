@@ -22,20 +22,19 @@ import user_client.utils.CheckoutToVersion;
 import user_client.utils.ChoosePath;
 
 public class RemoteApplyTab extends Tab {
-    protected TextField projectPathField;
-    protected Button chooseProjectButton;
-    protected CheckBox rememberPathsCheckbox;
-    protected CheckBox replaceFilesCheckbox;
+    public TextField projectPathField;
+    public Button chooseProjectButton;
+    public CheckBox rememberPathsCheckbox;
+    public CheckBox replaceFilesCheckbox;
     public Button patchToRootButton;
-    protected Label activeCourgettesAmount;
-    protected Label applyStatus;
+    public Label activeCourgettesAmount;
+    public Label applyStatus;
+    public Path projectPath;
     
-    public void setupUi(Path projectPath, Path patchPath, VBox applyPatchTabContent, JSONObject config) {
-        boolean rememberPaths = false;
-
+    public VBox setupUi(JSONObject config) {
         projectPath = Paths.get(config.getJSONObject(RunCourgette.os)
                 .getJSONObject("remotePatchingInfo").getString("projectPath"));
-        rememberPaths = config.getJSONObject(RunCourgette.os)
+        boolean rememberPaths = config.getJSONObject(RunCourgette.os)
                 .getJSONObject("remotePatchingInfo").getBoolean("rememberPaths");
 
         Label projectPathLabel = new Label("Path to project:");
@@ -69,14 +68,15 @@ public class RemoteApplyTab extends Tab {
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
         applyStatus = new Label("Status: idle");
 
-        applyPatchTabContent = new VBox();
+        VBox applyPatchTabContent = new VBox();
         applyPatchTabContent.setAlignment(Pos.TOP_CENTER);
         applyPatchTabContent.setPadding(new Insets(5));
         applyPatchTabContent.getChildren().addAll(projectPathPanel, checkboxPanel,
                 patchToRootButton, activeCourgettesAmount, applyStatus);
+        return applyPatchTabContent;
     }
 
-    public void setupEvents(Path projectPath, Path patchPath, String rootVersion, JSONObject config, AuthWindow authWindow) {
+    public void setupEvents(String rootVersion, JSONObject config, AuthWindow authWindow) {
         chooseProjectButton.setOnAction(e -> {
             ChoosePath.choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });

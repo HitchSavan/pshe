@@ -27,20 +27,21 @@ import user_client.utils.ChoosePath;
 import user_client.utils.CourgetteHandler;
 
 public class GenerateTab extends Tab {
-    protected TextField oldProjectPathField;
-    protected Button chooseOldProjectButton;
-    protected TextField newProjectPathField;
-    protected Button chooseNewProjectButton;
-    protected TextField patchPathField;
-    protected Button choosePatchButton;
-    protected CheckBox rememberPathsCheckbox;
-    protected Button genPatchButton;
-    protected Label activeCourgettesAmount;
+    public TextField oldProjectPathField;
+    public Button chooseOldProjectButton;
+    public TextField newProjectPathField;
+    public Button chooseNewProjectButton;
+    public TextField patchPathField;
+    public Button choosePatchButton;
+    public CheckBox rememberPathsCheckbox;
+    public Button genPatchButton;
+    public Label activeCourgettesAmount;
+    public Path oldProjectPath;
+    public Path newProjectPath;
+    public Path patchFolderPath;
 
-    public GenerateTab(Path oldProjectPath, Path newProjectPath, Path patchFolderPath, JSONObject config) {
-        boolean rememberPaths = false;
-
-        rememberPaths = config.getJSONObject(RunCourgette.os)
+    public GenerateTab(JSONObject config) {
+        boolean rememberPaths = config.getJSONObject(RunCourgette.os)
                 .getJSONObject("localPatchCreationInfo").getBoolean("rememberPaths");
         oldProjectPath = Paths.get(config.getJSONObject(RunCourgette.os)
                 .getJSONObject("localPatchCreationInfo").getString("oldProjectPath"));
@@ -112,7 +113,7 @@ public class GenerateTab extends Tab {
         this.setContent(genTabContent);
     }
 
-    public void setupEvents(Path oldProjectPath, Path newProjectPath, Path patchFolderPath, JSONObject config, AuthWindow authWindow) {
+    public void setupEvents(JSONObject config, AuthWindow authWindow) {
         choosePatchButton.setOnAction(e -> {
             ChoosePath.choosePath(patchPathField, JFileChooser.DIRECTORIES_ONLY);
         });
@@ -124,7 +125,9 @@ public class GenerateTab extends Tab {
         });
         genPatchButton.setOnAction(e -> {
             genPatchButton.setDisable(true);
-            updatePaths(oldProjectPath, newProjectPath, patchFolderPath);
+            oldProjectPath = Paths.get(oldProjectPathField.getText());
+            newProjectPath = Paths.get(newProjectPathField.getText());
+            patchFolderPath = Paths.get(patchPathField.getText());
 
             if (!config.getJSONObject(RunCourgette.os).has("localPatchCreationInfo")) {
                 config.getJSONObject(RunCourgette.os).put("localPatchCreationInfo", new JSONObject());
@@ -162,11 +165,5 @@ public class GenerateTab extends Tab {
             CourgetteHandler.generatePatch(patchFolderPath, newProjectPath, oldProjectPath, newFiles, oldFiles, "backward", activeCourgettesAmount);
             genPatchButton.setDisable(false);
         });
-    }
-
-    private void updatePaths(Path oldProjectPath, Path newProjectPath, Path patchFolderPath) {
-        oldProjectPath = Paths.get(oldProjectPathField.getText());
-        newProjectPath = Paths.get(newProjectPathField.getText());
-        patchFolderPath = Paths.get(patchPathField.getText());
     }
 }

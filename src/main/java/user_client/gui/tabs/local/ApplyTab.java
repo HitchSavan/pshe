@@ -27,16 +27,18 @@ import user_client.utils.ChoosePath;
 import user_client.utils.CourgetteHandler;
 
 public class ApplyTab extends Tab {
-    protected TextField projectPathField;
-    protected Button chooseProjectButton;
-    protected TextField patchPathField;
-    protected Button choosePatchButton;
-    protected CheckBox rememberPathsCheckbox;
-    protected CheckBox replaceFilesCheckbox;
-    protected Button applyPatchButton;
-    protected Label activeCourgettesAmount;
+    public TextField projectPathField;
+    public Button chooseProjectButton;
+    public TextField patchPathField;
+    public Button choosePatchButton;
+    public CheckBox rememberPathsCheckbox;
+    public CheckBox replaceFilesCheckbox;
+    public Button applyPatchButton;
+    public Label activeCourgettesAmount;
+    public Path projectPath;
+    public Path patchPath;
 
-    public ApplyTab(Path projectPath, Path patchPath, JSONObject config) {
+    public ApplyTab(JSONObject config) {
         boolean rememberPaths = false;
         boolean replaceFiles = false;
 
@@ -100,7 +102,7 @@ public class ApplyTab extends Tab {
         this.setContent(tabContent);
     }
 
-    public void setupEvents(Path projectPath, Path patchPath, JSONObject config, AuthWindow authWindow) {
+    public void setupEvents(JSONObject config, AuthWindow authWindow) {
         choosePatchButton.setOnAction(e -> {
             ChoosePath.choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
@@ -109,7 +111,10 @@ public class ApplyTab extends Tab {
         });
         applyPatchButton.setOnAction(e -> {
             applyPatchButton.setDisable(true);
-            updatePaths(projectPath, patchPath);
+
+            projectPath = Paths.get(projectPathField.getText());
+            patchPath = Paths.get(patchPathField.getText());
+
             Path tmpProjectPath = projectPath.getParent().resolve("patched_tmp").resolve(projectPath.getFileName());
 
             if (!config.getJSONObject(RunCourgette.os).has("localPatchingInfo")) {
@@ -177,15 +182,10 @@ public class ApplyTab extends Tab {
                     e1.printStackTrace();
                     return;
                 }
-                new CourgetteHandler().applyPatch(oldPath.toString(), newPath.toString(), patchFile.toString(),
-                        replaceFilesCheckbox.isSelected(), activeCourgettesAmount, false);
+                new CourgetteHandler().applyPatch(oldPath, newPath, patchFile,
+                        projectPath, replaceFilesCheckbox.isSelected(), activeCourgettesAmount, false);
             }
             applyPatchButton.setDisable(false);
         });
-    }
-
-    private void updatePaths(Path projectPath, Path patchPath) {
-        projectPath = Paths.get(projectPathField.getText());
-        patchPath = Paths.get(patchPathField.getText());
     }
 }

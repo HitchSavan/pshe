@@ -27,15 +27,18 @@ import user_client.utils.ChoosePath;
 import user_client.utils.CourgetteHandler;
 
 public class RemoteGenerateTab extends Tab {
-    private TextField oldProjectPathField;
-    private Button chooseOldProjectButton;
-    private TextField newProjectPathField;
-    private Button chooseNewProjectButton;
-    private CheckBox rememberPathsCheckbox;
-    private Button genPatchButton;
-    private Label activeCourgettesAmount;
+    public TextField oldProjectPathField;
+    public Button chooseOldProjectButton;
+    public TextField newProjectPathField;
+    public Button chooseNewProjectButton;
+    public CheckBox rememberPathsCheckbox;
+    public Button genPatchButton;
+    public Label activeCourgettesAmount;
+    public Path oldProjectPath;
+    public Path newProjectPath;
 
-    public void setupUi(Path oldProjectPath, Path newProjectPath, Path patchPath, VBox genPatchTabContent, JSONObject config) {
+    public VBox setupUi(JSONObject config) {
+        // TODO: fix loading
         boolean rememberPaths = false;
 
         oldProjectPath = Paths.get(config.getJSONObject(RunCourgette.os)
@@ -83,14 +86,15 @@ public class RemoteGenerateTab extends Tab {
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
 
-        genPatchTabContent = new VBox();
+        VBox genPatchTabContent = new VBox();
         genPatchTabContent.setAlignment(Pos.TOP_CENTER);
         genPatchTabContent.setPadding(new Insets(5));
         genPatchTabContent.getChildren().addAll(oldProjectPathPanel, newProjectPathPanel,
                 checkboxPanel, genPatchButton, activeCourgettesAmount);
+        return genPatchTabContent;
     }
 
-    public void setupEvents(Path oldProjectPath, Path newProjectPath, Path patchPath, String rootVersion, JSONObject config, AuthWindow authWindow) {
+    public void setupEvents(String rootVersion, JSONObject config, AuthWindow authWindow) {
         chooseNewProjectButton.setOnAction(e -> {
             ChoosePath.choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
@@ -99,7 +103,8 @@ public class RemoteGenerateTab extends Tab {
         });
         genPatchButton.setOnAction(e -> {
             genPatchButton.setDisable(true);
-            updatePaths(oldProjectPath, newProjectPath);
+            oldProjectPath = Paths.get(oldProjectPathField.getText());
+            newProjectPath = Paths.get(newProjectPathField.getText());
             Path patchFolderPath = newProjectPath.getParent().resolve("tmp_patch");
 
             if (!config.getJSONObject(RunCourgette.os).has("remotePatchCreationInfo")) {
@@ -139,10 +144,5 @@ public class RemoteGenerateTab extends Tab {
             Directories.deleteDirectory(patchFolderPath);
             genPatchButton.setDisable(false);
         });
-    }
-
-    private void updatePaths(Path oldProjectPath, Path newProjectPath) {
-        oldProjectPath = Paths.get(oldProjectPathField.getText());
-        newProjectPath = Paths.get(newProjectPathField.getText());
     }
 }

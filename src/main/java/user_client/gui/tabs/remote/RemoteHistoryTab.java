@@ -38,16 +38,18 @@ import user_client.utils.AlertWindow;
 import user_client.utils.HistoryTableItem;
 
 public class RemoteHistoryTab extends Tab {
-    private Button checkoutButton;
-    private TextField checkoutProjectPathField;
-    private Button chooseCheckoutProjectButton;
-    private CheckBox rememberPathsCheckbox;
-    private CheckBox replaceFilesCheckbox;
-    private Label activeCourgettesAmount;
-    private Label checkoutStatus;
-    private VersionEntity checkoutVersion;
+    public Button checkoutButton;
+    public TextField checkoutProjectPathField;
+    public Button chooseCheckoutProjectButton;
+    public CheckBox rememberPathsCheckbox;
+    public CheckBox replaceFilesCheckbox;
+    public Label activeCourgettesAmount;
+    public Label checkoutStatus;
+    public VersionEntity checkoutVersion;
+    public VersionEntity rootVersion;
+    public Path projectPath;
 
-    public void setupUi(Path projectPath, VBox historyTabContent, JSONObject config, VersionEntity rootVersion, List<Button> disablingButtons) {
+    public VBox setupUi(JSONObject config, List<Button> disablingButtons) {
         String[] columnNames = {"Version", "Date", "Files amount", "Total size"};
 
         ObservableList<HistoryTableItem> versions = FXCollections.observableArrayList();
@@ -83,8 +85,6 @@ public class RemoteHistoryTab extends Tab {
 
         TableView.TableViewSelectionModel<HistoryTableItem> selectionModel = table.getSelectionModel();
         selectionModel.selectedItemProperty().addListener(new ChangeListener<HistoryTableItem>() {
-            private VersionEntity checkoutVersion;
-
             @Override
             public void changed(ObservableValue<? extends HistoryTableItem> val, HistoryTableItem oldVal, HistoryTableItem newVal) {
                 if (newVal != null) {
@@ -100,13 +100,11 @@ public class RemoteHistoryTab extends Tab {
         tablePane.setPadding(new Insets(5));
         tablePane.getChildren().addAll(table, checkoutButton);
 
-        updateTableContent(table, rootVersion, disablingButtons);
-        
-        boolean rememberPaths = false;
+        updateTableContent(table, disablingButtons);
 
         projectPath = Paths.get(config.getJSONObject(RunCourgette.os)
                 .getJSONObject("remotePatchingInfo").getString("projectPath"));
-        rememberPaths = config.getJSONObject(RunCourgette.os)
+        boolean rememberPaths = config.getJSONObject(RunCourgette.os)
                 .getJSONObject("remotePatchingInfo").getBoolean("rememberPaths");
 
         Label projectPathLabel = new Label("Path to project:");
@@ -136,14 +134,15 @@ public class RemoteHistoryTab extends Tab {
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
         checkoutStatus = new Label("Status: idle");
 
-        historyTabContent = new VBox();
+        VBox historyTabContent = new VBox();
         historyTabContent.setAlignment(Pos.TOP_CENTER);
         historyTabContent.setPadding(new Insets(5));
         historyTabContent.getChildren().addAll(tablePane, projectPathPanel, checkboxPanel,
                 activeCourgettesAmount, checkoutStatus);
+        return historyTabContent;
     }
 
-    private void updateTableContent(ObservableList<HistoryTableItem> versions, VersionEntity rootVersion, List<Button> disablingButtons) {
+    private void updateTableContent(ObservableList<HistoryTableItem> versions, List<Button> disablingButtons) {
         Task<Void> task = new Task<>() {
             @Override public Void call() {
                 disablingButtons.forEach(button -> {
@@ -158,7 +157,7 @@ public class RemoteHistoryTab extends Tab {
                     if (versionsHistory.getBoolean("success")) {
                         versionsHistory.getJSONArray("versions").forEach(v -> {
                             if (((JSONObject)v).getBoolean("is_root")) {
-                                updateRootVersion(rootVersion, (JSONObject)v);
+                                rootVersion = new VersionEntity(((JSONObject)v).put("files", new JSONArray()));
                                 versions.add(new HistoryTableItem(rootVersion));
                             } else {
                                 versions.add(new HistoryTableItem(new VersionEntity(((JSONObject)v).put("files", new JSONArray()))));
@@ -180,13 +179,9 @@ public class RemoteHistoryTab extends Tab {
         new Thread(task).start();
     }
 
-    private void updateRootVersion(VersionEntity rootVersion, JSONObject version) {
-        rootVersion = new VersionEntity(version.put("files", new JSONArray()));
-    }
-
-    private void updateTableContent(TableView<HistoryTableItem> table, VersionEntity rootVersion, List<Button> disablingButtons) {
+    private void updateTableContent(TableView<HistoryTableItem> table, List<Button> disablingButtons) {
         ObservableList<HistoryTableItem> versions = table.getItems();
-        updateTableContent(versions, rootVersion, disablingButtons);
+        updateTableContent(versions, disablingButtons);
         table.setItems(versions);
     }
 
@@ -218,7 +213,6 @@ public class RemoteHistoryTab extends Tab {
                         String strItem = item.toString();
                         setText(strItem);
                         HistoryTableItem tableItem = getTableView().getItems().get(getIndex());
-
 
                         if (tableItem.getIsRoot()) {
                             Font font = Font.font(getFont().getName(), FontWeight.BOLD, FontPosture.REGULAR, getFont().getSize());
