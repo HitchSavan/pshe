@@ -8,12 +8,9 @@ import javax.swing.JFileChooser;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
-import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ChoosePath {
-
     public static void choosePath(Button invokingButton, TextField field, int mode) {
         invokingButton.setDisable(true);
         choosePath(field, mode, Paths.get(field.getText()));
@@ -32,26 +29,21 @@ public class ChoosePath {
         }
     }
     public static void chooseDirectory(Button invokingButton, TextField field, Stage primaryStage) {
-        invokingButton.setDisable(true);
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle(invokingButton.getText());
-        if (!field.getText().isEmpty()) {
-            directoryChooser.setInitialDirectory(Paths.get(field.getText()).getParent().toFile());
-        }
-        File directory = directoryChooser.showDialog(primaryStage);
-        if (directory != null) {
-            field.setText(directory.toString());
-        }
-        invokingButton.setDisable(false);
+        CustomDirChooser fileChooser = new CustomDirChooser();
+        choose(fileChooser, invokingButton, field, primaryStage);
     }
     public static void chooseFile(Button invokingButton, TextField field, Stage primaryStage) {
+        CustomFileChooser fileChooser = new CustomFileChooser();
+        choose(fileChooser, invokingButton, field, primaryStage);
+    }
+
+    public static void choose(FileDirectoryChooser fileChooser, Button invokingButton, TextField field, Stage primaryStage) {
         invokingButton.setDisable(true);
-        FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle(invokingButton.getText());
         if (!field.getText().isEmpty()) {
-            fileChooser.setInitialDirectory(Paths.get(field.getText()).getParent().toFile());
+            fileChooser.setInitialDirectory(Paths.get(field.getText()).getParent());
         }
-        File directory = fileChooser.showOpenDialog(primaryStage);
+        File directory = fileChooser.showDialog(primaryStage);
         if (directory != null) {
             field.setText(directory.toString());
         }

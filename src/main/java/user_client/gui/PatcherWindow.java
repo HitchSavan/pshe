@@ -15,8 +15,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -51,6 +53,7 @@ public class PatcherWindow extends Application {
     RemoteGenerateTab remoteGenTab;
 
     Button modeSwitchButton;
+    ProgressBar progressBar;
     boolean isFileMode;
 
     HashMap<TabPane, HashMap<String, Integer>> tabsNames = new HashMap<>();
@@ -82,6 +85,54 @@ public class PatcherWindow extends Application {
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
         setupMainWindowUi();
+    }
+
+    private void setupMainWindowUi() {
+        this.primaryStage.setMinWidth(300);
+        this.primaryStage.setMinHeight(defaultWindowHeight);
+
+        this.primaryStage.setWidth(defaultWindowWidth);
+        this.primaryStage.setHeight(defaultWindowHeight);
+
+        VBox mainPane = new VBox();
+        VBox.setVgrow(fileTabs, Priority.ALWAYS);
+        VBox.setVgrow(remoteTabs, Priority.ALWAYS);
+
+        modeSwitchButton = new Button("Change to remote mode");
+        mainPane.setPadding(new Insets(0, 0, 5, 0));
+        mainPane.setAlignment(Pos.CENTER);
+
+        if (!authWindow.config.has("defaultFilemode")) {
+            authWindow.config.put("defaultFilemode", true);
+        }
+
+        isFileMode = authWindow.config.getBoolean("defaultFilemode");
+        
+
+        AnchorPane progressPane = new AnchorPane();
+        progressBar = new ProgressBar();
+        AnchorPane.setLeftAnchor(progressBar, 5d);
+        AnchorPane.setRightAnchor(progressBar, 5d);
+        progressPane.getChildren().add(progressBar);
+        
+        mainPane.getChildren().addAll(fileTabs, progressPane, modeSwitchButton);
+
+        switchMode(mainPane, !isFileMode);
+
+        this.primaryScene = new Scene(mainPane);
+        this.primaryStage.setScene(primaryScene);
+
+        modeSwitchButton.setOnAction(e -> {
+            switchMode(mainPane, isFileMode);
+        });
+        
+        this.primaryStage.setOnCloseRequest(e -> {
+            authWindow.saveConfig();
+            Directories.deleteDirectory("tmp");
+            System.exit(0);
+        });
+
+        this.primaryStage.show();
     }
 
     private void setupFileUi() {
@@ -127,47 +178,6 @@ public class PatcherWindow extends Application {
         historyTabContent = historyTab.setupUi(authWindow.config, List.of(remoteApplyTab.patchToRootButton));
         genPatchTabContent = remoteGenTab.setupUi(authWindow.config);
         setupRemoteEvents();
-    }
-
-    private void setupMainWindowUi() {
-        this.primaryStage.setMinWidth(300);
-        this.primaryStage.setMinHeight(defaultWindowHeight);
-
-        this.primaryStage.setWidth(defaultWindowWidth);
-        this.primaryStage.setHeight(defaultWindowHeight);
-
-        VBox mainPane = new VBox();
-        VBox.setVgrow(fileTabs, Priority.ALWAYS);
-        VBox.setVgrow(remoteTabs, Priority.ALWAYS);
-
-        modeSwitchButton = new Button("Change to remote mode");
-        mainPane.setPadding(new Insets(0, 0, 5, 0));
-        mainPane.setAlignment(Pos.CENTER);
-
-        if (!authWindow.config.has("defaultFilemode")) {
-            authWindow.config.put("defaultFilemode", true);
-        }
-
-        isFileMode = authWindow.config.getBoolean("defaultFilemode");
-        
-        mainPane.getChildren().addAll(fileTabs, modeSwitchButton);
-
-        switchMode(mainPane, !isFileMode);
-
-        this.primaryScene = new Scene(mainPane);
-        this.primaryStage.setScene(primaryScene);
-
-        modeSwitchButton.setOnAction(e -> {
-            switchMode(mainPane, isFileMode);
-        });
-        
-        this.primaryStage.setOnCloseRequest(e -> {
-            authWindow.saveConfig();
-            Directories.deleteDirectory("tmp");
-            System.exit(0);
-        });
-
-        this.primaryStage.show();
     }
 
     private void addTab(TabPane tabbedPane, String tabName, Tab newTab) {
@@ -248,7 +258,7 @@ public class PatcherWindow extends Application {
                 }
 
                 Platform.runLater(() -> {
-                    remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
+                    remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), progressBar, authWindow.config, authWindow);
                     remoteGenTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
                     historyTab.setupEvents();
                 });

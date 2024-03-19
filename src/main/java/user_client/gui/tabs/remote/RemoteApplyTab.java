@@ -10,6 +10,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
@@ -75,13 +76,13 @@ public class RemoteApplyTab extends Tab {
         return applyPatchTabContent;
     }
 
-    public void setupEvents(String rootVersion, JSONObject config, AuthWindow authWindow) {
+    public void setupEvents(String rootVersion, ProgressBar progressBar, JSONObject config, AuthWindow authWindow) {
         chooseProjectButton.setOnAction(e -> {
             ChoosePath.chooseDirectory(chooseProjectButton, projectPathField, (Stage)chooseProjectButton.getScene().getWindow());
         });
         patchToRootButton.setOnAction(e -> {
             CheckoutToVersion.checkoutToVersion(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),
-                    rootVersion, applyStatus, activeCourgettesAmount, patchToRootButton, config, authWindow,
+                    rootVersion, applyStatus, progressBar, activeCourgettesAmount, patchToRootButton, config, authWindow,
                     rememberPathsCheckbox.isSelected(), rootVersion);
         });
     }
