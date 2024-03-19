@@ -10,6 +10,7 @@ import org.json.JSONObject;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -74,7 +75,6 @@ public class PatcherWindow extends Application {
         Platform.runLater(() -> {
             authWindow = new AuthWindow();
             setupFileUi();
-            setupEvents();
         });
     }
 
@@ -106,6 +106,8 @@ public class PatcherWindow extends Application {
         addTab(remoteTabs, "Patching", remoteApplyTab);
         addTab(remoteTabs, "History", historyTab);
         addTab(remoteTabs, "Generate", remoteGenTab);
+
+        setupEvents();
     }
 
     private void setupLoginUi(Tab tab, Button button) {
@@ -124,6 +126,7 @@ public class PatcherWindow extends Application {
         applyPatchTabContent = remoteApplyTab.setupUi(authWindow.config);
         historyTabContent = historyTab.setupUi(authWindow.config, List.of(remoteApplyTab.patchToRootButton));
         genPatchTabContent = remoteGenTab.setupUi(authWindow.config);
+        setupRemoteEvents();
     }
 
     private void setupMainWindowUi() {
@@ -228,7 +231,6 @@ public class PatcherWindow extends Application {
                 }
 
                 setupRemoteUi();
-                setupRemoteEvents();
 
                 remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("Generate")).setContent(genPatchTabContent);
                 remoteTabs.getTabs().get(tabsNames.get(remoteTabs).get("History")).setContent(historyTabContent);
@@ -238,9 +240,22 @@ public class PatcherWindow extends Application {
     }
 
     private void setupRemoteEvents() {
-        remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
-        remoteGenTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
-        historyTab.setupEvents();
+        Task<Void> task = new Task<>() {
+            @Override public Void call() throws InterruptedException {
+
+                while (historyTab.rootVersion == null) {
+                    Thread.sleep(100);
+                }
+
+                Platform.runLater(() -> {
+                    remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
+                    remoteGenTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
+                    historyTab.setupEvents();
+                });
+                return null;
+            }
+        };
+        new Thread(task).start();
     }
 
     private void switchMode(VBox pane, boolean isFileMode) {

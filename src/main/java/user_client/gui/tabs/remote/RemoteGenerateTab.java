@@ -5,8 +5,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import javax.swing.JFileChooser;
-
 import org.json.JSONObject;
 
 import javafx.geometry.Insets;
@@ -18,6 +16,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import patcher.utils.files_utils.Directories;
 import patcher.utils.files_utils.FileVisitor;
 import patcher.utils.patching_utils.RunCourgette;
@@ -96,10 +95,10 @@ public class RemoteGenerateTab extends Tab {
 
     public void setupEvents(String rootVersion, JSONObject config, AuthWindow authWindow) {
         chooseNewProjectButton.setOnAction(e -> {
-            ChoosePath.choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.chooseDirectory(chooseNewProjectButton, newProjectPathField, (Stage)chooseNewProjectButton.getScene().getWindow());
         });
         chooseOldProjectButton.setOnAction(e -> {
-            ChoosePath.choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.chooseDirectory(chooseOldProjectButton, oldProjectPathField, (Stage)chooseOldProjectButton.getScene().getWindow());
         });
         genPatchButton.setOnAction(e -> {
             genPatchButton.setDisable(true);

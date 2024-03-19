@@ -3,8 +3,6 @@ package user_client.gui.tabs.remote;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import javax.swing.JFileChooser;
-
 import org.json.JSONObject;
 
 import javafx.geometry.Insets;
@@ -16,6 +14,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
 import user_client.utils.CheckoutToVersion;
@@ -78,7 +77,7 @@ public class RemoteApplyTab extends Tab {
 
     public void setupEvents(String rootVersion, JSONObject config, AuthWindow authWindow) {
         chooseProjectButton.setOnAction(e -> {
-            ChoosePath.choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.chooseDirectory(chooseProjectButton, projectPathField, (Stage)chooseProjectButton.getScene().getWindow());
         });
         patchToRootButton.setOnAction(e -> {
             CheckoutToVersion.checkoutToVersion(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),

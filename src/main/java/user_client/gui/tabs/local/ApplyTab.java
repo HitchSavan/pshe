@@ -104,10 +104,10 @@ public class ApplyTab extends Tab {
 
     public void setupEvents(JSONObject config, AuthWindow authWindow) {
         choosePatchButton.setOnAction(e -> {
-            ChoosePath.choosePath(patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.choosePath(choosePatchButton, patchPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
         chooseProjectButton.setOnAction(e -> {
-            ChoosePath.choosePath(projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.choosePath(chooseProjectButton, projectPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
         applyPatchButton.setOnAction(e -> {
             applyPatchButton.setDisable(true);

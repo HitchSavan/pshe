@@ -115,13 +115,13 @@ public class GenerateTab extends Tab {
 
     public void setupEvents(JSONObject config, AuthWindow authWindow) {
         choosePatchButton.setOnAction(e -> {
-            ChoosePath.choosePath(patchPathField, JFileChooser.DIRECTORIES_ONLY);
+            ChoosePath.choosePath(choosePatchButton, patchPathField, JFileChooser.DIRECTORIES_ONLY);
         });
         chooseNewProjectButton.setOnAction(e -> {
-            ChoosePath.choosePath(newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.choosePath(chooseNewProjectButton, newProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
         chooseOldProjectButton.setOnAction(e -> {
-            ChoosePath.choosePath(oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
+            ChoosePath.choosePath(chooseOldProjectButton, oldProjectPathField, JFileChooser.FILES_AND_DIRECTORIES);
         });
         genPatchButton.setOnAction(e -> {
             genPatchButton.setDisable(true);
