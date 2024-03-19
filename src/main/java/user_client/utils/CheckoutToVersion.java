@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,6 +25,7 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.ProgressBar;
 import patcher.remote_api.endpoints.FilesEndpoint;
 import patcher.remote_api.endpoints.PatchesEndpoint;
@@ -200,6 +202,7 @@ public class CheckoutToVersion {
                     for (CourgetteHandler thread: threads) {
                         thread.join();
                     }
+                    threads.clear();
 
                     // Directories.deleteDirectory(folder);
                 }
@@ -232,6 +235,12 @@ public class CheckoutToVersion {
                 Platform.runLater(() -> {
                     statusLabel.setText("Status: checking project integrity, this can take awhile");
                 });
+
+                
+                if (!toVersion.equals(rootVersion)) {
+                    response = VersionsEndpoint.getSwitch(Map.of("v_from", rootVersion, "v_to", toVersion));
+                }
+
                 Map<String, List<Path>> integrityResult = checkProjectIntegrity(patchedFiles, projectPath, toVersion, progressBar);
                 counter.set(1);
                 checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
@@ -242,10 +251,11 @@ public class CheckoutToVersion {
                         progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("failed").size());
                     });
                     
-                    FilesEndpoint.getRoot(file, Map.of("location", file.toString()));
+                    FilesEndpoint.getRoot(file, Map.of("location", patchedProjectPath.relativize(file).toString()));
                     if (!toVersion.equals(rootVersion)) {
-                        // TODO: checkout from root file to toVersion
-                        response = VersionsEndpoint.getSwitch(Map.of());
+                        // TODO: checkout from root file to toVersion, needs testing
+                        checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, patchedProjectPath,
+                                file, threads, checkoutDump, courgettesAmountLabel, statusLabel);
                     }
                 }
                 if (!replaceFiles) {
@@ -301,6 +311,8 @@ public class CheckoutToVersion {
                     FilesEndpoint.getRoot(patchedProjectPath.resolve(remoteFile), Map.of("location", remoteFile.toString()));
                     if (!toVersion.equals(rootVersion)) {
                         // TODO: checkout from root file to toVersion
+                        checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, patchedProjectPath,
+                                patchedProjectPath.resolve(remoteFile), threads, checkoutDump, courgettesAmountLabel, statusLabel);
                     }
                 }
 
@@ -354,6 +366,45 @@ public class CheckoutToVersion {
             }
         };
         new Thread(task).start();
+    }
+
+    public static void checkoutFromRoot(JSONArray files, Path oldProjectPath, Path patchFolderPath,
+            Path patchedProjectPath, Path absRootFilePath, List<CourgetteHandler> threads, StringBuffer checkoutDump, 
+            Label courgettesAmountLabel, Labeled statusLabel) throws InterruptedException {
+        for (Object fileItem: files) {
+            JSONObject jsonFile = (JSONObject)fileItem;
+            if (jsonFile.getString("location").equals(patchedProjectPath.relativize(absRootFilePath).toString())) {
+                jsonFile.getJSONArray("patches").forEach(patchItem -> {
+                    JSONObject patch = (JSONObject)patchItem;
+                    Path subfolderPath = Paths.get("");
+                    try {
+                        subfolderPath = patchFolderPath.resolve(
+                                "from_" + patch.getString("version_from") + "_to_" + patch.getString("version_to"));
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    Path absPatchPath = subfolderPath.resolve(jsonFile.getString("location"));
+
+                    try {
+                        checkoutDump.append("\tpatching ").append(jsonFile.getString("location")).append(System.lineSeparator());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    CourgetteHandler thread = new CourgetteHandler();
+                    thread.applyPatch(absRootFilePath, Paths.get(absRootFilePath.toString() + "_patched"),
+                            absPatchPath, oldProjectPath, true, courgettesAmountLabel, true);
+                    threads.add(thread);
+                    String statusStr = subfolderPath.relativize(absPatchPath).toString();
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Status: patching " + statusStr);
+                    });
+                });
+            }
+            
+        }
+        for (CourgetteHandler thread: threads) {
+            thread.join();
+        }
     }
 
     public static Map<String, List<Path>> checkProjectIntegrity(

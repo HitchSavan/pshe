@@ -23,7 +23,7 @@ public class ChoosePath {
         }
         fileChooser.setFileSelectionMode(mode);
         int option = fileChooser.showOpenDialog(null);
-        if(option == JFileChooser.APPROVE_OPTION){
+        if(option == JFileChooser.APPROVE_OPTION) {
            File file = fileChooser.getSelectedFile();
            field.setText(file.getAbsolutePath());
         }
