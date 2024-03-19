@@ -248,6 +248,7 @@ public class CheckoutToVersion {
                     checkoutDump.append("\tre-download ").append(file).append(System.lineSeparator());
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: downloading " + file.toString());
+                        // TODO: split progress onto ~8 parts
                         progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("failed").size());
                     });
                     
