@@ -8,6 +8,7 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -18,6 +19,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -31,10 +33,14 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
 import patcher.remote_api.endpoints.VersionsEndpoint;
 import patcher.remote_api.entities.VersionEntity;
 import patcher.utils.patching_utils.RunCourgette;
+import user_client.gui.AuthWindow;
 import user_client.utils.AlertWindow;
+import user_client.utils.CheckoutToVersion;
+import user_client.utils.ChoosePath;
 import user_client.utils.HistoryTableItem;
 
 public class RemoteHistoryTab extends Tab {
@@ -169,7 +175,9 @@ public class RemoteHistoryTab extends Tab {
                         checkoutButton.setDisable(false);
                     }
                 } catch (IOException e) {
-                    AlertWindow.showErrorWindow("Cannot load history");
+                    Platform.runLater(() -> {
+                        AlertWindow.showErrorWindow("Cannot load history");
+                    });
                     e.printStackTrace();
                 }
                 return null;
@@ -185,13 +193,18 @@ public class RemoteHistoryTab extends Tab {
         table.setItems(versions);
     }
 
-    public void setupEvents() {
+    public void setupEvents(ProgressBar progressBar, JSONObject config, AuthWindow authWindow) {
+        chooseCheckoutProjectButton.setOnAction(e -> {
+            ChoosePath.chooseDirectory(chooseCheckoutProjectButton, checkoutProjectPathField, (Stage)chooseCheckoutProjectButton.getScene().getWindow());
+        });
         checkoutButton.setOnAction(e -> {
             checkoutButton.setDisable(true);
             if (checkoutVersion != null) {
-                // TODO: CHECKOUT PLACEHOLDER
                 System.out.print("Checkout to version ");
                 System.out.println(checkoutVersion.getVersionString());
+                CheckoutToVersion.checkoutToVersion(projectPath, replaceFilesCheckbox.isSelected(),
+                        checkoutVersion.getVersionString(), checkoutStatus, progressBar, activeCourgettesAmount,
+                        checkoutButton, config, authWindow, rememberPathsCheckbox.isSelected(), rootVersion.getVersionString());
             } else {
                 System.out.println("No version selected");
             }

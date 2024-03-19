@@ -16,7 +16,7 @@ public class CourgetteHandler extends Thread {
     private Path oldFile;
     private Path newPath;
     private Path patchFile;
-    private Path projectPath;
+    private Path courgetteWorkingDirectory;
     private boolean replaceFiles;
     private boolean generate;
     private boolean redirectOutput;
@@ -66,13 +66,13 @@ public class CourgetteHandler extends Thread {
     }
 
     // TODO: disable exec button
-    private void init(Path oldFile, Path newPath, Path patchFile, Path projectPath, boolean replaceFiles,
+    private void init(Path oldFile, Path newPath, Path patchFile, Path courgetteWorkingDirectory, boolean replaceFiles,
             Label updatingComponent, boolean generate, boolean redirectOutput) {
         this.updatingComponent = updatingComponent;
         this.oldFile = oldFile;
         this.newPath = newPath;
         this.patchFile = patchFile;
-        this.projectPath = projectPath;
+        this.courgetteWorkingDirectory = courgetteWorkingDirectory;
         this.replaceFiles = replaceFiles;
         this.redirectOutput = redirectOutput;
         this.generate = generate;
@@ -81,7 +81,9 @@ public class CourgetteHandler extends Thread {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
+                });
                 e.printStackTrace();
             }
         }
@@ -97,14 +99,14 @@ public class CourgetteHandler extends Thread {
         }
     }
     
-    public void generatePatch(Path oldFile, Path newPath, Path patchFile, Path projectPath,
+    public void generatePatch(Path oldFile, Path newPath, Path patchFile, Path courgetteWorkingDirectory,
             Label updatingComponent, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, projectPath, false, updatingComponent, true, redirectOutput);
+        init(oldFile, newPath, patchFile, courgetteWorkingDirectory, false, updatingComponent, true, redirectOutput);
     }
     
-    public void applyPatch(Path oldFile, Path newPath, Path patchFile, Path projectPath,
+    public void applyPatch(Path oldFile, Path newPath, Path patchFile, Path courgetteWorkingDirectory,
             boolean replaceFiles, Label updatingComponent, boolean redirectOutput) {
-        init(oldFile, newPath, patchFile, projectPath, replaceFiles, updatingComponent, false, redirectOutput);
+        init(oldFile, newPath, patchFile, courgetteWorkingDirectory, replaceFiles, updatingComponent, false, redirectOutput);
     }
 
     @Override
@@ -113,7 +115,9 @@ public class CourgetteHandler extends Thread {
             try {
                 sleep(10);
             } catch (InterruptedException e) {
-                AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot handle max courgette threads amount");
+                });
                 e.printStackTrace();
                 return;
             }
@@ -123,12 +127,14 @@ public class CourgetteHandler extends Thread {
 
         try {
             if (generate) {
-                Patcher.generatePatch(oldFile, newPath, patchFile, projectPath, redirectOutput);
+                Patcher.generatePatch(oldFile, newPath, patchFile, courgetteWorkingDirectory, redirectOutput);
             } else {
-                Patcher.applyPatch(oldFile, newPath, patchFile, projectPath, replaceFiles, redirectOutput);
+                Patcher.applyPatch(oldFile, newPath, patchFile, courgetteWorkingDirectory, replaceFiles, redirectOutput);
             }
         } catch (IOException | InterruptedException e) {
-            AlertWindow.showErrorWindow("Cannot run courgette instance");
+            Platform.runLater(() -> {
+                AlertWindow.showErrorWindow("Cannot run courgette instance");
+            });
             e.printStackTrace();
         }
         decreaseThreadsAmount();

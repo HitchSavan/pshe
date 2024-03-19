@@ -68,12 +68,16 @@ public class CheckoutToVersion {
                 content = new String(Files.readAllBytes(Paths.get(file.toURI())));
                 currentVersion = new JSONObject(content).getString("currentVersion");
             } catch (IOException ee) {
-                AlertWindow.showErrorWindow("Cannot open project config file");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot open project config file");
+                });
                 ee.printStackTrace();
                 return;
             }
         } else {
-            AlertWindow.showErrorWindow("Cannot open project config file");
+            Platform.runLater(() -> {
+                AlertWindow.showErrorWindow("Cannot open project config file");
+            });
             button.setDisable(false);
         }
 
@@ -89,6 +93,7 @@ public class CheckoutToVersion {
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: getting patch sequence from " + params.get("v_from") + " to " + params.get("v_to"));
                     });
+                    // TODO: need to sort patch array
                     response = VersionsEndpoint.getSwitch(params);
                 } catch (IOException e1) {
                     e1.printStackTrace();
@@ -98,14 +103,15 @@ public class CheckoutToVersion {
 
                 Map<Path, List<Map<String, String>>> patchParams = new HashMap<>();
 
+                SaveResponse.save(response);
+
                 counter.set(0);
                 response.getJSONArray("files").forEach(fileItem -> {
                     JSONObject file = (JSONObject)fileItem;
                     file.getJSONArray("patches").forEach(patchItem -> {
                         JSONObject patch = (JSONObject)patchItem;
                         try {
-                            Path subfolderPath = tmpPatchPath.resolve(
-                                    "from_" + patch.getString("version_from") + "_to_" + patch.getString("version_to"));
+                            Path subfolderPath = tmpPatchPath.resolve("to_" + patch.getString("version_to"));
                             if (!subfolderSequence.contains(subfolderPath)) {
                                 subfolderSequence.add(subfolderPath);
                                 patchParams.put(subfolderPath, new ArrayList<>());
@@ -192,10 +198,11 @@ public class CheckoutToVersion {
                         }
                         checkoutDump.append("\tpatching ").append(patchFile).append(System.lineSeparator());
                         CourgetteHandler thread = new CourgetteHandler();
-                        thread.applyPatch(oldPath, newPath, patchFile, projectPath, false, courgettesAmountLabel, true);
+                        thread.applyPatch(oldPath, newPath, patchFile, projectPath.getParent(), false, courgettesAmountLabel, true);
                         threads.add(thread);
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: patching " + folder.relativize(patchFile).toString());
+                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / patchesAmount);
                         });
                     }
 
@@ -223,7 +230,9 @@ public class CheckoutToVersion {
                 try {
                     Directories.saveJSONFile(patchedProjectPath.resolve("config.json"), updatedConfig);
                 } catch (JSONException | IOException e1) {
-                    AlertWindow.showErrorWindow("Cannot update project config file");
+                    Platform.runLater(() -> {
+                        AlertWindow.showErrorWindow("Cannot update project config file");
+                    });
                     e1.printStackTrace();
                 }
 
@@ -242,7 +251,7 @@ public class CheckoutToVersion {
                 }
 
                 Map<String, List<Path>> integrityResult = checkProjectIntegrity(patchedFiles, projectPath, toVersion, progressBar);
-                counter.set(1);
+                counter.set(0);
                 checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("failed")) {
                     checkoutDump.append("\tre-download ").append(file).append(System.lineSeparator());
@@ -363,6 +372,8 @@ public class CheckoutToVersion {
                 writer.write(checkoutDump.toString());
                 writer.close();
 
+                progressBar.setProgress(1);
+
                 return null;
             }
         };
@@ -379,8 +390,7 @@ public class CheckoutToVersion {
                     JSONObject patch = (JSONObject)patchItem;
                     Path subfolderPath = Paths.get("");
                     try {
-                        subfolderPath = patchFolderPath.resolve(
-                                "from_" + patch.getString("version_from") + "_to_" + patch.getString("version_to"));
+                        subfolderPath = patchFolderPath.resolve("to_" + patch.getString("version_to"));
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -393,7 +403,7 @@ public class CheckoutToVersion {
                     }
                     CourgetteHandler thread = new CourgetteHandler();
                     thread.applyPatch(absRootFilePath, Paths.get(absRootFilePath.toString() + "_patched"),
-                            absPatchPath, oldProjectPath, true, courgettesAmountLabel, true);
+                            absPatchPath, oldProjectPath.getParent(), true, courgettesAmountLabel, true);
                     threads.add(thread);
                     String statusStr = subfolderPath.relativize(absPatchPath).toString();
                     Platform.runLater(() -> {

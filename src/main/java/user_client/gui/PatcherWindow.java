@@ -37,7 +37,7 @@ public class PatcherWindow extends Application {
 
     String windowName = "PSHE patcher";
     int defaultWindowWidth = 600;
-    int defaultWindowHeight = 260;
+    int defaultWindowHeight = 350;
 
     Stage primaryStage;
     Scene primaryScene;
@@ -231,12 +231,16 @@ public class PatcherWindow extends Application {
                 Connector.setBaseUrl(authWindow.urlApi);
                 try {
                     if (!ServiceEndpoint.ping().getBoolean("success")) {
-                        AlertWindow.showErrorWindow("Cannot connect to remote server");
+                        Platform.runLater(() -> {
+                            AlertWindow.showErrorWindow("Cannot connect to remote server");
+                        });
                         return;
                     }
                 } catch (IOException e1) {
                     e1.printStackTrace();
-                    AlertWindow.showErrorWindow("Cannot connect to remote server");
+                    Platform.runLater(() -> {
+                        AlertWindow.showErrorWindow("Cannot connect to remote server");
+                    });
                     return;
                 }
 
@@ -252,7 +256,6 @@ public class PatcherWindow extends Application {
     private void setupRemoteEvents() {
         Task<Void> task = new Task<>() {
             @Override public Void call() throws InterruptedException {
-
                 while (historyTab.rootVersion == null) {
                     Thread.sleep(100);
                 }
@@ -260,7 +263,7 @@ public class PatcherWindow extends Application {
                 Platform.runLater(() -> {
                     remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), progressBar, authWindow.config, authWindow);
                     remoteGenTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);
-                    historyTab.setupEvents();
+                    historyTab.setupEvents(progressBar, authWindow.config, authWindow);
                 });
                 return null;
             }

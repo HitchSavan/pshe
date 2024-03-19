@@ -10,6 +10,7 @@ import javax.swing.JFileChooser;
 
 import org.json.JSONObject;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -146,7 +147,9 @@ public class GenerateTab extends Tab {
             try {
                 fileVisitor = new FileVisitor();
             } catch (IOException e1) {
-                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot walk project file tree");
+                });
                 e1.printStackTrace();
             }
 
@@ -157,7 +160,9 @@ public class GenerateTab extends Tab {
                 oldFiles = new ArrayList<>(fileVisitor.walkFileTree(oldProjectPath));
                 newFiles = new ArrayList<>(fileVisitor.walkFileTree(newProjectPath));
             } catch (IOException e1) {
-                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot walk project file tree");
+                });
                 e1.printStackTrace();
             }
             

@@ -5,6 +5,8 @@ import java.io.IOException;
 
 import org.json.JSONObject;
 
+import javafx.application.Platform;
+
 public class SaveResponse {
     public static void save(JSONObject response) {
         try {
@@ -13,7 +15,9 @@ public class SaveResponse {
             jsonOutputStream.write(response.toString(4).getBytes());
             jsonOutputStream.close();
         } catch (IOException e) {
-            AlertWindow.showErrorWindow("Cannot save response to file");
+            Platform.runLater(() -> {
+                AlertWindow.showErrorWindow("Cannot save response to file");
+            });
             e.printStackTrace();
         }
     }

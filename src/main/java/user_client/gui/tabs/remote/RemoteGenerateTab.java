@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.json.JSONObject;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -121,7 +122,9 @@ public class RemoteGenerateTab extends Tab {
             try {
                 fileVisitor = new FileVisitor(newProjectPath);
             } catch (IOException e1) {
-                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot walk project file tree");
+                });
                 e1.printStackTrace();
             }
 
@@ -132,7 +135,9 @@ public class RemoteGenerateTab extends Tab {
                 oldFiles = fileVisitor.walkFileTree(oldProjectPath);
                 newFiles = fileVisitor.walkFileTree(newProjectPath);
             } catch (IOException e1) {
-                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot walk project file tree");
+                });
                 e1.printStackTrace();
             }
             

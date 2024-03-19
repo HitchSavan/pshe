@@ -10,6 +10,7 @@ import javax.swing.JFileChooser;
 
 import org.json.JSONObject;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -134,7 +135,9 @@ public class ApplyTab extends Tab {
             try {
                 fileVisitor = new FileVisitor();
             } catch (IOException e1) {
-                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot walk project file tree");
+                });
                 e1.printStackTrace();
             }
 
@@ -145,7 +148,9 @@ public class ApplyTab extends Tab {
                 oldFiles = fileVisitor.walkFileTree(projectPath);
                 patchFiles = fileVisitor.walkFileTree(patchPath);
             } catch (IOException e1) {
-                AlertWindow.showErrorWindow("Cannot walk project file tree");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot walk project file tree");
+                });
                 e1.printStackTrace();
             }
 
@@ -169,7 +174,9 @@ public class ApplyTab extends Tab {
                         Files.createFile(oldPath);
                         Files.write(oldPath, emptyData);
                     } catch (IOException e1) {
-                        AlertWindow.showErrorWindow("Cannot create patch file");
+                        Platform.runLater(() -> {
+                            AlertWindow.showErrorWindow("Cannot create patch file");
+                        });
                         e1.printStackTrace();
                         return;
                     }
@@ -178,7 +185,9 @@ public class ApplyTab extends Tab {
                 try {
                     Files.createDirectories(newPath.getParent());
                 } catch (IOException e1) {
-                    AlertWindow.showErrorWindow("Cannot create patch files directory");
+                    Platform.runLater(() -> {
+                        AlertWindow.showErrorWindow("Cannot create patch files directory");
+                    });
                     e1.printStackTrace();
                     return;
                 }

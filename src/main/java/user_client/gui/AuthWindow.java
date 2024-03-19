@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -72,7 +73,9 @@ public class AuthWindow extends Stage {
                 content = DataEncoder.toString(Files.readAllBytes(Paths.get(file.toURI())));
                 config = new JSONObject(content);
             } catch (IOException e) {
-                AlertWindow.showErrorWindow("Cannot open app config file");
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot open app config file");
+                });
                 e.printStackTrace();
                 return;
             }
@@ -196,7 +199,9 @@ public class AuthWindow extends Stage {
         try {
             Directories.saveJSONFile(Paths.get("config.json"), config);
         } catch (JSONException | IOException e) {
-            AlertWindow.showErrorWindow("Cannot save app config");
+            Platform.runLater(() -> {
+                AlertWindow.showErrorWindow("Cannot save app config");
+            });
             e.printStackTrace();
         }
     }
