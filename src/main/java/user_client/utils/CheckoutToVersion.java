@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +24,12 @@ import org.json.JSONObject;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import patcher.remote_api.endpoints.FilesEndpoint;
 import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
@@ -146,6 +149,8 @@ public class CheckoutToVersion {
 
                 CourgetteHandler.setMAX_THREADS_AMOUNT(20);
                 CourgetteHandler.setMAX_ACTIVE_COURGETTES_AMOUNT(20);
+
+                subfolderSequence.sort(Comparator.naturalOrder());
 
                 for (Path folder: subfolderSequence) {
                     counter.addAndGet(patchParams.get(folder).size());
@@ -372,7 +377,9 @@ public class CheckoutToVersion {
                 writer.write(checkoutDump.toString());
                 writer.close();
 
-                progressBar.setProgress(1);
+                Platform.runLater(() -> {
+                    progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+                });
 
                 return null;
             }
