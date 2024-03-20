@@ -12,10 +12,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.JSONArray;
@@ -24,12 +25,12 @@ import org.json.JSONObject;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.layout.VBox;
 import patcher.remote_api.endpoints.FilesEndpoint;
 import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
@@ -47,6 +48,9 @@ public class CheckoutToVersion {
             Label statusLabel, ProgressBar progressBar, Label courgettesAmountLabel, Button button, JSONObject config, AuthWindow authWindow,
             boolean rememberPaths, String rootVersion) {
         button.setDisable(true);
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        ((VBox) button.getScene().getRoot()).getChildren().add(progressIndicator);
+        progressIndicator.setProgress(0);
         StringBuffer checkoutDump = new StringBuffer();
 
         Path projectParentFolder = projectPath.getParent();
@@ -102,7 +106,7 @@ public class CheckoutToVersion {
                     e1.printStackTrace();
                 }
 
-                List<Path> subfolderSequence = new ArrayList<>();
+                Set<Path> subfolderSequence = new TreeSet<>();
 
                 Map<Path, List<Map<String, String>>> patchParams = new HashMap<>();
 
@@ -115,8 +119,7 @@ public class CheckoutToVersion {
                         JSONObject patch = (JSONObject)patchItem;
                         try {
                             Path subfolderPath = tmpPatchPath.resolve("to_" + patch.getString("version_to"));
-                            if (!subfolderSequence.contains(subfolderPath)) {
-                                subfolderSequence.add(subfolderPath);
+                            if (subfolderSequence.add(subfolderPath)) {
                                 patchParams.put(subfolderPath, new ArrayList<>());
                             }
 
@@ -149,8 +152,6 @@ public class CheckoutToVersion {
 
                 CourgetteHandler.setMAX_THREADS_AMOUNT(20);
                 CourgetteHandler.setMAX_ACTIVE_COURGETTES_AMOUNT(20);
-
-                subfolderSequence.sort(Comparator.naturalOrder());
 
                 for (Path folder: subfolderSequence) {
                     counter.addAndGet(patchParams.get(folder).size());
@@ -207,7 +208,7 @@ public class CheckoutToVersion {
                         threads.add(thread);
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: patching " + folder.relativize(patchFile).toString());
-                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / patchesAmount);
+                            progressBar.setProgress(progressBar.getProgress() + 1/patchesAmount);
                         });
                     }
 
@@ -215,6 +216,7 @@ public class CheckoutToVersion {
                         thread.join();
                     }
                     threads.clear();
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1/subfolderSequence.size());
 
                     // Directories.deleteDirectory(folder);
                 }
@@ -256,6 +258,7 @@ public class CheckoutToVersion {
                 }
 
                 Map<String, List<Path>> integrityResult = checkProjectIntegrity(patchedFiles, projectPath, toVersion, progressBar);
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.2);
                 counter.set(0);
                 checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
                 for (Path file: integrityResult.get("failed")) {
@@ -263,7 +266,7 @@ public class CheckoutToVersion {
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: downloading " + file.toString());
                         // TODO: split progress onto ~8 parts
-                        progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("failed").size());
+                        progressBar.setProgress(progressBar.getProgress() + 1/integrityResult.get("failed").size());
                     });
                     
                     FilesEndpoint.getRoot(file, Map.of("location", patchedProjectPath.relativize(file).toString()));
@@ -273,6 +276,7 @@ public class CheckoutToVersion {
                                 file, threads, checkoutDump, courgettesAmountLabel, statusLabel);
                     }
                 }
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
                 if (!replaceFiles) {
                     counter.set(0);
                     checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
@@ -280,10 +284,11 @@ public class CheckoutToVersion {
                         checkoutDump.append("deleted ").append(file).append(System.lineSeparator());
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: deleting " + file.toString());
-                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("deleted").size());
+                            progressBar.setProgress(progressBar.getProgress() + 1/integrityResult.get("deleted").size());
                         });
                         Files.deleteIfExists(file);
                     }
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
 
                     counter.set(0);
                     String statusStr = patchedProjectPath.toString();
@@ -294,12 +299,13 @@ public class CheckoutToVersion {
                                 + patchedProjectPath.resolve(projectPath.relativize(oldFile)));
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: moving " + projectPath.relativize(oldFile).toString() + " to " + statusStr);
-                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("unchanged").size());
+                            progressBar.setProgress(progressBar.getProgress() + 1/integrityResult.get("unchanged").size());
                         });
 
                         patchedProjectPath.resolve(projectPath.relativize(oldFile)).getParent().toFile().mkdirs();
                         Files.copy(oldFile, patchedProjectPath.resolve(projectPath.relativize(oldFile)), StandardCopyOption.REPLACE_EXISTING);
                     }
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
                 } else {
                     counter.set(0);
                     checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
@@ -308,10 +314,11 @@ public class CheckoutToVersion {
                         checkoutDump.append("deleted ").append(deletingFile).append(System.lineSeparator());
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: deleting " + deletingFile.toString());
-                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("deleted").size());
+                            progressBar.setProgress(progressBar.getProgress() + 1/integrityResult.get("deleted").size());
                         });
                         Files.deleteIfExists(deletingFile);
                     }
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.2);
                 }
 
                 counter.set(0);
@@ -320,7 +327,7 @@ public class CheckoutToVersion {
                     checkoutDump.append("\tre-download ").append(remoteFile).append(System.lineSeparator());
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: downloading " + remoteFile.toString());
-                        progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("missing").size());
+                        progressBar.setProgress(progressBar.getProgress() + 1/integrityResult.get("missing").size());
                     });
                     
                     FilesEndpoint.getRoot(patchedProjectPath.resolve(remoteFile), Map.of("location", remoteFile.toString()));
@@ -330,6 +337,7 @@ public class CheckoutToVersion {
                                 patchedProjectPath.resolve(remoteFile), threads, checkoutDump, courgettesAmountLabel, statusLabel);
                     }
                 }
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
 
                 CourgetteHandler.setRemainingFilesAmount(0);
                 if (replaceFiles) {
@@ -339,7 +347,7 @@ public class CheckoutToVersion {
                     for (Path file: totalPatchedFiles) {
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: updating " + Paths.get(pathString).relativize(file).toString());
-                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / totalPatchedFiles.size());
+                            progressBar.setProgress(progressBar.getProgress() + 1/totalPatchedFiles.size());
                         });
                         try {
                             projectPath.resolve(patchedProjectPath.relativize(file)).getParent().toFile().mkdirs();
@@ -348,18 +356,21 @@ public class CheckoutToVersion {
                             e.printStackTrace();
                         }
                     }
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
 
                     counter.set(0);
                     for (Path file: integrityResult.get("deleted")) {
                         Path targetFile = projectPath.resolve(Paths.get(pathString).relativize(file));
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: deleting " + file.toString());
-                            progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / integrityResult.get("deleted").size());
+                            progressBar.setProgress(progressBar.getProgress() + 1/integrityResult.get("deleted").size());
                         });
                         Files.deleteIfExists(targetFile);
                     }
                     Files.deleteIfExists(patchedProjectPath);
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
                 }
+                progressIndicator.setProgress(1);
 
                 Instant finish = Instant.now();
                 StringBuilder str = new StringBuilder("Status: done ");
@@ -435,11 +446,10 @@ public class CheckoutToVersion {
         List<Path> deletedFiles = new ArrayList<>();
         List<Path> unchangedFiles = new ArrayList<>();
 
-        AtomicLong counter = new AtomicLong(0);
         patchedFiles.forEach((relativeFile, file) -> {
             IntegrityChecker.checkLocalIntegrity(file, relativeFile, failedFiles, deletedFiles, versionFiles);
             Platform.runLater(() -> {
-                progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / (patchedFiles.size() + versionFiles.size()));
+                progressBar.setProgress(progressBar.getProgress() + 1/(patchedFiles.size() + versionFiles.size()));
             });
         });
 
@@ -447,7 +457,7 @@ public class CheckoutToVersion {
             Path file = oldProjectPath.resolve(remoteFile.toString());
             IntegrityChecker.checkRemoteIntegrity(file, remoteFile, patchedFiles, unchangedFiles, missingFiles, versionFiles);
             Platform.runLater(() -> {
-                progressBar.setProgress(Double.valueOf(counter.getAndIncrement()) / (patchedFiles.size() + versionFiles.size()));
+                progressBar.setProgress(progressBar.getProgress() + 1/(patchedFiles.size() + versionFiles.size()));
             });
         });
 
