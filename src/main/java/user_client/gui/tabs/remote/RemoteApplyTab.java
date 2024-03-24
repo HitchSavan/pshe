@@ -64,6 +64,8 @@ public class RemoteApplyTab extends Tab {
         patchToRootButton = new Button("Patch to root version");
         patchToRootButton.setPrefSize(150, 0);
         patchToRootButton.setDisable(true);
+        
+        CheckoutToVersion.addDisablingButton(patchToRootButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
         applyStatus = new Label("Status: idle");
@@ -81,7 +83,7 @@ public class RemoteApplyTab extends Tab {
             ChoosePath.chooseDirectory(chooseProjectButton, projectPathField, (Stage)chooseProjectButton.getScene().getWindow());
         });
         patchToRootButton.setOnAction(e -> {
-            CheckoutToVersion.checkoutToVersion(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),
+            CheckoutToVersion.checkoutToVersionByPatches(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),
                     rootVersion, applyStatus, progressBar, activeCourgettesAmount, patchToRootButton, config, authWindow,
                     rememberPathsCheckbox.isSelected(), rootVersion);
         });

@@ -88,6 +88,7 @@ public class RemoteHistoryTab extends Tab {
         checkoutButton = new Button("Checkout");
         checkoutButton.setMinSize(70, 0);
         checkoutButton.setDisable(true);
+        CheckoutToVersion.addDisablingButton(checkoutButton);
 
         TableView.TableViewSelectionModel<HistoryTableItem> selectionModel = table.getSelectionModel();
         selectionModel.selectedItemProperty().addListener(new ChangeListener<HistoryTableItem>() {
@@ -202,7 +203,7 @@ public class RemoteHistoryTab extends Tab {
             if (checkoutVersion != null) {
                 System.out.print("Checkout to version ");
                 System.out.println(checkoutVersion.getVersionString());
-                CheckoutToVersion.checkoutToVersion(projectPath, replaceFilesCheckbox.isSelected(),
+                CheckoutToVersion.checkoutToVersionByPatches(projectPath, replaceFilesCheckbox.isSelected(),
                         checkoutVersion.getVersionString(), checkoutStatus, progressBar, activeCourgettesAmount,
                         checkoutButton, config, authWindow, rememberPathsCheckbox.isSelected(), rootVersion.getVersionString());
             } else {

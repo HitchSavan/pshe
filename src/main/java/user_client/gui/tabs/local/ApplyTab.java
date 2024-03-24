@@ -24,6 +24,7 @@ import patcher.utils.files_utils.FileVisitor;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
 import user_client.utils.AlertWindow;
+import user_client.utils.CheckoutToVersion;
 import user_client.utils.ChoosePath;
 import user_client.utils.CourgetteHandler;
 
@@ -91,6 +92,7 @@ public class ApplyTab extends Tab {
 
         applyPatchButton = new Button("Patch");
         applyPatchButton.setPrefSize(60, 0);
+        CheckoutToVersion.addDisablingButton(applyPatchButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
 

@@ -13,11 +13,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,6 +31,8 @@ import javafx.scene.control.Labeled;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.VBox;
+import lombok.Getter;
+import lombok.Setter;
 import patcher.remote_api.endpoints.FilesEndpoint;
 import patcher.remote_api.endpoints.PatchesEndpoint;
 import patcher.remote_api.endpoints.VersionsEndpoint;
@@ -44,7 +46,230 @@ import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
 
 public class CheckoutToVersion {
-    public static void checkoutToVersion(Path projectPath, boolean replaceFiles, String toVersion,
+    private static Set<Button> disablingButtons = new HashSet<>();
+    // Map<relativeFilePath, downloadPatchRequesParams>
+    private static Map<Path, List<Map<String, String>>> patchFiles = new HashMap<>();
+    @Getter @Setter
+    private static int MAX_DOWNLOADS_AMOUNT = 20;
+    private static int currentDownloadsAmount = 0;
+
+    private static synchronized int getCurrentDownloadsAmount() {
+        return currentDownloadsAmount;
+    }
+    private static synchronized void increaseCurrentDownloadsAmount() {
+        ++currentDownloadsAmount;
+    }
+    private static synchronized void decreaseCurrentDownloadsAmount() {
+        --currentDownloadsAmount;
+    }
+
+    public static void addDisablingButton(Button button) {
+        disablingButtons.add(button);
+    }
+    public static void disableButtons() {
+        disablingButtons.forEach(button -> {
+            button.setDisable(true);
+        });
+    }
+    public static void enableButtons() {
+        disablingButtons.forEach(button -> {
+            button.setDisable(false);
+        });
+    }
+
+    //| get switch response
+    // update progressbar based on summary files size
+    //| in different threads (with max amount restriction):
+    // for each file:   set "active file version" (current project file version) to earlest;
+    //                      folders: "old" - first "from_version", "new" - first "to_version" version in patch sequence
+    //                  download patches simultaneously (with global max amount restriction)
+    //                  wait for next version sequence patch download to complete:
+    //                          check downloaded patch integrity (on failure - ???)
+    //                          run courgette patching thread on completed patch file (with global max amount restriction)
+    //                          check patched file integrity (based on switch response "new_file" info)
+    //                                  (on failure - re-download root file, attempt to patch to needed version and pray)
+    //                          set "active file version" to next earliest "from_version" in patch sequence
+    //                          folders: "old" - newely patched file, "new" - next earliest "to_version" version in patch sequence
+    // upon completion: check if all "version files" on remote is present in final patched files;
+    //                      if something missing or integrity check failed == re-download root, patch to needen version
+    //                          (needs determine if files not changed since start project version)
+    //                  final integrity check, cry
+    public static void checkoutToVersionByFiles(Path projectPath, boolean replaceFiles, String toVersion,
+            Label statusLabel, ProgressBar progressBar, Label courgettesAmountLabel, JSONObject config, AuthWindow authWindow,
+            boolean rememberPaths, String rootVersion) throws IOException {
+        patchFiles.clear();
+        disableButtons();
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        ((VBox) courgettesAmountLabel.getScene().getRoot()).getChildren().add(progressIndicator);
+        progressIndicator.setProgress(0);
+        StringBuffer checkoutDump = new StringBuffer();
+
+        Path projectParentFolder = projectPath.getParent();
+
+        Path patchedStorageFolder = projectParentFolder.resolve("patched_tmp").resolve(projectPath.getFileName());
+        Path patchStorageFolder = projectParentFolder.resolve("patch_tmp").resolve(projectPath.getFileName());
+
+        if (!config.getJSONObject(RunCourgette.os).has("remotePatchingInfo")) {
+            config.getJSONObject(RunCourgette.os).put("remotePatchingInfo", new JSONObject());
+        }
+        config.getJSONObject(RunCourgette.os)
+                .getJSONObject("remotePatchingInfo").put("projectPath", projectPath.toString());
+        config.getJSONObject(RunCourgette.os)
+                .getJSONObject("remotePatchingInfo").put("rememberPaths", rememberPaths);
+        authWindow.saveConfig();
+
+        String currentVersion = null;
+        if (Files.exists(projectPath.resolve("config.json"))) {
+            File file = new File(projectPath.resolve("config.json").toString());
+            String content;
+            try {
+                content = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                currentVersion = new JSONObject(content).getString("currentVersion");
+            } catch (IOException ee) {
+                Platform.runLater(() -> {
+                    AlertWindow.showErrorWindow("Cannot open project config file");
+                });
+                ee.printStackTrace();
+                enableButtons();
+                return;
+            }
+        }
+        if (currentVersion == null) {
+            Platform.runLater(() -> {
+                AlertWindow.showErrorWindow("Cannot open project config file");
+            });
+            enableButtons();
+            return;
+        }
+
+        Map<String, String> params = Map.of("v_from", currentVersion, "v_to", toVersion);
+        FileVisitor fileVisitor = new FileVisitor();
+        Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile = new HashMap<>();
+        Task<Void> task = new Task<>() {
+            @Override public Void call() throws InterruptedException, NoSuchAlgorithmException, JSONException, IOException {
+                Instant start = Instant.now();
+                JSONObject response = null;
+                try {
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Status: getting patch sequence from " + params.get("v_from") + " to " + params.get("v_to"));
+                    });
+                    // TODO: need to sort patch array
+                    response = VersionsEndpoint.getSwitch(params);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                SaveResponse.save(response);
+
+                response.getJSONArray("files").forEach(fileItem -> {
+                    JSONObject file = (JSONObject)fileItem;
+                    Path location = Paths.get(file.getString("location")); 
+                    patchFiles.put(location, new ArrayList<>());
+                    file.getJSONArray("patches").forEach(patchItem -> {
+                        JSONObject patch = (JSONObject)patchItem;
+                        try {
+                            patchFiles.get(location).add(
+                                Map.of(
+                                    "v_from", patch.getString("version_from"),
+                                    "v_to", patch.getString("version_to"),
+                                    "file_location", location.toString()
+                                ));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                });
+
+
+                List<Path> oldFiles = null;
+                oldFiles = fileVisitor.walkFileTree(projectPath);
+                checkoutDump.append("old files amount ").append(oldFiles.size()).append(System.lineSeparator());
+
+                Path relativePatchPath;
+                Path newPath;
+                Path oldPath;
+                byte[] emptyData = {0};
+
+                List<CourgetteHandler> courgetteThreads = new ArrayList<>();
+
+                CourgetteHandler.setMAX_THREADS_AMOUNT(20);
+                CourgetteHandler.setMAX_ACTIVE_COURGETTES_AMOUNT(20);
+
+                long counter = 0;
+                for (Path relativePatchLocation: patchFiles.keySet()) {
+                    counter += patchFiles.get(relativePatchLocation).size();
+                }
+
+                final long patchesAmount = counter;
+                CourgetteHandler.setRemainingFilesAmount((int)patchesAmount);
+
+                Platform.runLater(() -> {
+                    progressBar.setProgress(0);
+                });
+
+                List<Thread> filesThreads = new ArrayList<>();
+                for (Path relativePatchLocation: patchFiles.keySet()) {
+                    Task<Void> perfileTask = new Task<Void>() {
+                        @Override public Void call() throws InterruptedException {
+                            patchesThreadsDownloadPerFile.put(relativePatchLocation, new HashMap<>());
+                            for (Map<String, String> patchRequest: patchFiles.get(relativePatchLocation)) {
+                                Task<Void> downloadPatchTask = new Task<>() {
+                                    @Override public Void call() throws IOException {
+                                        increaseCurrentDownloadsAmount();
+                                        String versionTo = patchRequest.get("v_to");
+                                        Path patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(relativePatchLocation);
+                                        String statusStr = relativePatchLocation.toString();
+                                        Platform.runLater(() -> {
+                                            statusLabel.setText("Status: downloading " + statusStr);
+                                        });
+                                        PatchesEndpoint.getFile(patchFile, patchRequest);
+                                        decreaseCurrentDownloadsAmount();
+                                        return null;
+                                    };
+                                };
+                                Thread downloadPatchThread = new Thread(downloadPatchTask);
+                                patchesThreadsDownloadPerFile.get(relativePatchLocation)
+                                        .put(patchRequest.get("v_to"), downloadPatchThread);
+                                downloadPatchThread.start();
+                            };
+                            
+                            Path currentFile = projectPath.resolve(relativePatchLocation);
+                            Path newFile;
+                            for (Map<String, String> patchRequest: patchFiles.get(relativePatchLocation)) {
+                                String versionTo = patchRequest.get("v_to");
+
+                                patchesThreadsDownloadPerFile.get(relativePatchLocation).get(versionTo).join();
+
+                                Path patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(relativePatchLocation);
+                                newFile = projectParentFolder.resolve("patched").resolve(versionTo).resolve(relativePatchLocation);
+                                
+                                CourgetteHandler courgetteThread = new CourgetteHandler();
+                                courgetteThread.applyPatch(currentFile, newFile, patchFile,
+                                        projectParentFolder, false, courgettesAmountLabel, true);
+                                courgetteThread.join();
+                            };
+                            return null;
+                        }
+                    };
+
+                    Thread perfileThread = new Thread(perfileTask);
+                    filesThreads.add(perfileThread);
+                    perfileThread.start();
+
+                    while (getCurrentDownloadsAmount() >= MAX_DOWNLOADS_AMOUNT) {
+                        Thread.sleep(100);
+                    }
+                }
+
+                for (Thread thread: filesThreads) {
+                    thread.join();
+                }
+                return null;
+            }
+        };
+        new Thread(task).start();
+    }
+
+    public static void checkoutToVersionByPatches(Path projectPath, boolean replaceFiles, String toVersion,
             Label statusLabel, ProgressBar progressBar, Label courgettesAmountLabel, Button button, JSONObject config, AuthWindow authWindow,
             boolean rememberPaths, String rootVersion) {
         button.setDisable(true);
@@ -86,6 +311,7 @@ public class CheckoutToVersion {
                 AlertWindow.showErrorWindow("Cannot open project config file");
             });
             button.setDisable(false);
+            return;
         }
 
         Map<String, String> params = Map.of("v_from", currentVersion, "v_to", toVersion);
@@ -99,7 +325,6 @@ public class CheckoutToVersion {
                     Platform.runLater(() -> {
                         statusLabel.setText("Status: getting patch sequence from " + params.get("v_from") + " to " + params.get("v_to"));
                     });
-                    // TODO: need to sort patch array
                     response = VersionsEndpoint.getSwitch(params);
                 } catch (IOException e1) {
                     e1.printStackTrace();
