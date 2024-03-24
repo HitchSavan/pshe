@@ -1,5 +1,0 @@
-This is test file,
-the old one.
-This line of text will be removed
-точка
-This line is the same.
