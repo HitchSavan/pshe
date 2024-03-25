@@ -76,8 +76,7 @@ public class CourgetteHandler extends Thread {
         this.replaceFiles = replaceFiles;
         this.redirectOutput = redirectOutput;
         this.generate = generate;
-        CourgetteHandler.increaseTotalThreadsAmount();
-        while (CourgetteHandler.totalThreadsAmount() >= CourgetteHandler.getMAX_THREADS_AMOUNT()) {
+        while (totalThreadsAmount() >= getMAX_THREADS_AMOUNT()) {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
@@ -87,6 +86,7 @@ public class CourgetteHandler extends Thread {
                 e.printStackTrace();
             }
         }
+        increaseTotalThreadsAmount();
         start();
     }
 
@@ -136,11 +136,12 @@ public class CourgetteHandler extends Thread {
                 AlertWindow.showErrorWindow("Cannot run courgette instance");
             });
             e.printStackTrace();
+        } finally {
+            decreaseThreadsAmount();
+            decreaseTotalThreadsAmount();
+            decreaseRemainingFilesAmount();
+            updateComponent(updatingComponent);
         }
-        decreaseThreadsAmount();
-        decreaseTotalThreadsAmount();
-        decreaseRemainingFilesAmount();
-        updateComponent(updatingComponent);
     }
 
     public static void generatePatch(Path patchFolderPath, Path oldProjectPath, Path newProjectPath, List<Path> oldFiles,

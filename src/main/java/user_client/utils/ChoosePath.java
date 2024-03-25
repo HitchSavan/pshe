@@ -1,6 +1,7 @@
 package user_client.utils;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -40,7 +41,7 @@ public class ChoosePath {
     public static void choose(FileDirectoryChooser fileChooser, Button invokingButton, TextField field, Stage primaryStage) {
         invokingButton.setDisable(true);
         fileChooser.setTitle(invokingButton.getText());
-        if (!field.getText().isEmpty()) {
+        if (!field.getText().isEmpty() && Files.exists(Paths.get(field.getText()).getParent())) {
             fileChooser.setInitialDirectory(Paths.get(field.getText()).getParent());
         }
         File directory = fileChooser.showDialog(primaryStage);

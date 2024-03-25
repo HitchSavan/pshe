@@ -203,9 +203,14 @@ public class RemoteHistoryTab extends Tab {
             if (checkoutVersion != null) {
                 System.out.print("Checkout to version ");
                 System.out.println(checkoutVersion.getVersionString());
-                CheckoutToVersion.checkoutToVersionByPatches(projectPath, replaceFilesCheckbox.isSelected(),
-                        checkoutVersion.getVersionString(), checkoutStatus, progressBar, activeCourgettesAmount,
-                        checkoutButton, config, authWindow, rememberPathsCheckbox.isSelected(), rootVersion.getVersionString());
+                try {
+                    CheckoutToVersion.checkoutToVersionByFiles(projectPath, replaceFilesCheckbox.isSelected(),
+                            checkoutVersion.getVersionString(), checkoutStatus, progressBar, activeCourgettesAmount,
+                            config, authWindow, rememberPathsCheckbox.isSelected(), rootVersion.getVersionString());
+                } catch (IOException e1) {
+                    AlertWindow.showErrorWindow("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+                    e1.printStackTrace();
+                }
             } else {
                 System.out.println("No version selected");
             }

@@ -55,6 +55,9 @@ public class CheckoutToVersion {
     @Getter @Setter
     private static int MAX_DOWNLOADS_AMOUNT = 20;
     private static int currentDownloadsAmount = 0;
+    @Getter @Setter
+    private static int MAX_PATCHING_FILES_AMOUNT = 20;
+    private static int currentPatchingFilesAmount = 0;
 
     private static synchronized int getCurrentDownloadsAmount() {
         return currentDownloadsAmount;
@@ -64,6 +67,16 @@ public class CheckoutToVersion {
     }
     private static synchronized void decreaseCurrentDownloadsAmount() {
         --currentDownloadsAmount;
+    }
+
+    private static synchronized int getCurrentPatchingFilesAmount() {
+        return currentPatchingFilesAmount;
+    }
+    private static synchronized void increaseCurrentPatchingFilesAmount() {
+        ++currentPatchingFilesAmount;
+    }
+    private static synchronized void decreaseCurrentPatchingFilesAmount() {
+        --currentPatchingFilesAmount;
     }
 
     public static void addDisablingButton(Button button) {
@@ -166,7 +179,7 @@ public class CheckoutToVersion {
 
                 response.getJSONArray("files").forEach(fileItem -> {
                     JSONObject file = (JSONObject)fileItem;
-                    Path location = Paths.get(file.getString("location")); 
+                    Path location = Paths.get(file.getString("location"));
                     patchFiles.put(location, new ArrayList<>());
                     patchedFilesIntegrity.put(location, new HashMap<>());
                     file.getJSONArray("patches").forEach(patchItem -> {
@@ -211,23 +224,25 @@ public class CheckoutToVersion {
 
                 List<Thread> filesThreads = new ArrayList<>();
                 Map<Path, Path> finalPatchedFiles = new HashMap<>();
-                for (Path relativeFileLocation: patchFiles.keySet()) {
-                    Task<Void> perfileTask = new Task<Void>() {
-                        @Override public Void call() throws InterruptedException, IOException, NoSuchAlgorithmException {
-                            patchesThreadsDownloadPerFile.put(relativeFileLocation, new HashMap<>());
-                            for (Map<String, String> patchRequest: patchFiles.get(relativeFileLocation)) {
+                Task<Void> downloadTask = new Task<>() {
+                    @Override public Void call() throws InterruptedException {
+                        for (Path relativeFileLocation: patchFiles.keySet()) {
+                            Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
+                            patchesThreadsDownloadPerFile.put(_relativeFileLocation, new HashMap<>());
+                            for (Map<String, String> patchRequest: patchFiles.get(_relativeFileLocation)) {
+                                Map<String, String> _patchRequest = new HashMap<>(patchRequest);
                                 Task<Void> downloadPatchTask = new Task<>() {
                                     @Override public Void call() throws IOException, NoSuchAlgorithmException, JSONException {
                                         increaseCurrentDownloadsAmount();
-                                        String versionTo = patchRequest.get("v_to");
-                                        Path patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(relativeFileLocation);
-                                        String statusStr = relativeFileLocation.toString();
+                                        String versionTo = _patchRequest.get("v_to");
+                                        Path patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(_relativeFileLocation);
+                                        String statusStr = _relativeFileLocation.toString();
                                         Platform.runLater(() -> {
                                             statusLabel.setText("Status: downloading " + statusStr);
                                         });
-                                        PatchesEndpoint.getFile(patchFile, patchRequest);
+                                        PatchesEndpoint.getFile(patchFile, _patchRequest);
 
-                                        JSONObject patchInfoResponse = PatchesEndpoint.getInfo(patchRequest);
+                                        JSONObject patchInfoResponse = PatchesEndpoint.getInfo(_patchRequest);
                                         // TODO: handle failure
                                         IntegrityChecker.checkFileIntegrity(patchFile,
                                                 patchInfoResponse.getJSONObject("patch_file").getLong("patch_size"),
@@ -236,49 +251,71 @@ public class CheckoutToVersion {
                                         return null;
                                     };
                                 };
-                                Thread downloadPatchThread = new Thread(downloadPatchTask);
-                                patchesThreadsDownloadPerFile.get(relativeFileLocation)
-                                        .put(patchRequest.get("v_to"), downloadPatchThread);
-                                downloadPatchThread.start();
-                            };
-                            
-                            Path currentFile = projectPath.resolve(relativeFileLocation);
+
+                                while (getCurrentDownloadsAmount() >= MAX_DOWNLOADS_AMOUNT) {
+                                    Thread.sleep(100);
+                                }
+                                
+                                patchesThreadsDownloadPerFile.get(_relativeFileLocation)
+                                        .put(patchRequest.get("v_to"), new Thread(downloadPatchTask));
+                                patchesThreadsDownloadPerFile.get(_relativeFileLocation)
+                                        .get(patchRequest.get("v_to")).start();
+                            }
+                        }
+                        return null;
+                    }
+                };
+
+                new Thread(downloadTask).start();
+
+                for (Path relativeFileLocation: patchFiles.keySet()) {
+                    Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
+                    Task<Void> perfileTask = new Task<Void>() {
+                        @Override public Void call() throws InterruptedException, IOException, NoSuchAlgorithmException {   
+                            increaseCurrentPatchingFilesAmount();                         
+                            Path currentFile = projectPath.resolve(_relativeFileLocation);
                             Path newFile;
                             Path patchFile;
-                            for (Map<String, String> patchRequest: patchFiles.get(relativeFileLocation)) {
+                            for (Map<String, String> patchRequest: patchFiles.get(_relativeFileLocation)) {
                                 String versionTo = patchRequest.get("v_to");
 
-                                patchesThreadsDownloadPerFile.get(relativeFileLocation).get(versionTo).join();
+                                while (!patchesThreadsDownloadPerFile.get(_relativeFileLocation).containsKey(versionTo)) {
+                                    Thread.sleep(100);
+                                }
 
-                                patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(relativeFileLocation);
-                                newFile = projectParentFolder.resolve("patched").resolve(versionTo).resolve(relativeFileLocation);
+                                patchesThreadsDownloadPerFile.get(_relativeFileLocation).get(versionTo).join();
+
+                                patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(_relativeFileLocation);
+                                newFile = projectParentFolder.resolve("patched").resolve(versionTo).resolve(_relativeFileLocation);
                                 
                                 CourgetteHandler courgetteThread = new CourgetteHandler();
                                 courgetteThread.applyPatch(currentFile, newFile, patchFile,
                                         projectParentFolder, false, courgettesAmountLabel, true);
                                 courgetteThread.join();
+                                addToProgressBar(progressBar, 1d/patchesAmount);
                                 // TODO: handle failure
                                 IntegrityChecker.checkFileIntegrity(newFile,
-                                        patchedFilesIntegrity.get(relativeFileLocation).get(versionTo).first,
-                                        patchedFilesIntegrity.get(relativeFileLocation).get(versionTo).second);
-                                Files.deleteIfExists(patchFile);
+                                        patchedFilesIntegrity.get(_relativeFileLocation).get(versionTo).first,
+                                        patchedFilesIntegrity.get(_relativeFileLocation).get(versionTo).second);
+                                // Files.deleteIfExists(patchFile);
                                 if (replaceFiles) {
                                     Files.deleteIfExists(currentFile);
                                 }
                                 currentFile = newFile;
                             };
-                            finalPatchedFiles.put(relativeFileLocation, currentFile);
+                            finalPatchedFiles.put(_relativeFileLocation, currentFile);
+                            decreaseCurrentPatchingFilesAmount();
                             return null;
                         }
                     };
 
-                    Thread perfileThread = new Thread(perfileTask);
-                    filesThreads.add(perfileThread);
-                    perfileThread.start();
-
-                    while (getCurrentDownloadsAmount() >= MAX_DOWNLOADS_AMOUNT) {
+                    while (getCurrentPatchingFilesAmount() >= MAX_PATCHING_FILES_AMOUNT ||
+                            !patchesThreadsDownloadPerFile.containsKey(_relativeFileLocation)) {
                         Thread.sleep(100);
                     }
+
+                    filesThreads.add(new Thread(perfileTask));
+                    filesThreads.get(filesThreads.size()-1).start();
                 }
 
                 for (Thread thread: filesThreads) {

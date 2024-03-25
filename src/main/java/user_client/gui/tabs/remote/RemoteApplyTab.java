@@ -1,5 +1,6 @@
 package user_client.gui.tabs.remote;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -18,6 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
+import user_client.utils.AlertWindow;
 import user_client.utils.CheckoutToVersion;
 import user_client.utils.ChoosePath;
 
@@ -83,9 +85,14 @@ public class RemoteApplyTab extends Tab {
             ChoosePath.chooseDirectory(chooseProjectButton, projectPathField, (Stage)chooseProjectButton.getScene().getWindow());
         });
         patchToRootButton.setOnAction(e -> {
-            CheckoutToVersion.checkoutToVersionByPatches(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),
-                    rootVersion, applyStatus, progressBar, activeCourgettesAmount, patchToRootButton, config, authWindow,
-                    rememberPathsCheckbox.isSelected(), rootVersion);
+            try {
+                CheckoutToVersion.checkoutToVersionByFiles(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),
+                        rootVersion, applyStatus, progressBar, activeCourgettesAmount, config, authWindow,
+                        rememberPathsCheckbox.isSelected(), rootVersion);
+            } catch (IOException e1) {
+                AlertWindow.showErrorWindow("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+                e1.printStackTrace();
+            }
         });
     }
 }
