@@ -224,117 +224,137 @@ public class CheckoutToVersion {
 
                 List<Thread> filesThreads = new ArrayList<>();
                 Map<Path, Path> finalPatchedFiles = new HashMap<>();
-                Task<Void> downloadTask = new Task<>() {
-                    @Override public Void call() throws InterruptedException {
-                        for (Path relativeFileLocation: patchFiles.keySet()) {
-                            Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
-                            patchesThreadsDownloadPerFile.put(_relativeFileLocation, new HashMap<>());
-                            for (Map<String, String> patchRequest: patchFiles.get(_relativeFileLocation)) {
-                                Map<String, String> _patchRequest = new HashMap<>(patchRequest);
-                                Task<Void> downloadPatchTask = new Task<>() {
-                                    @Override public Void call() throws IOException, NoSuchAlgorithmException, JSONException {
-                                        increaseCurrentDownloadsAmount();
-                                        String versionTo = _patchRequest.get("v_to");
-                                        Path patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(_relativeFileLocation);
-                                        String statusStr = _relativeFileLocation.toString();
-                                        Platform.runLater(() -> {
-                                            statusLabel.setText("Status: downloading " + statusStr);
-                                        });
-                                        PatchesEndpoint.getFile(patchFile, _patchRequest);
 
-                                        JSONObject patchInfoResponse = PatchesEndpoint.getInfo(_patchRequest);
-                                        // TODO: handle failure
-                                        IntegrityChecker.checkFileIntegrity(patchFile,
-                                                patchInfoResponse.getJSONObject("patch_file").getLong("patch_size"),
-                                                patchInfoResponse.getJSONObject("patch_file").getString("patch_checksum"));
-                                        decreaseCurrentDownloadsAmount();
-                                        return null;
-                                    };
-                                };
-
-                                while (getCurrentDownloadsAmount() >= MAX_DOWNLOADS_AMOUNT) {
-                                    Thread.sleep(100);
-                                }
-                                
-                                patchesThreadsDownloadPerFile.get(_relativeFileLocation)
-                                        .put(patchRequest.get("v_to"), new Thread(downloadPatchTask));
-                                patchesThreadsDownloadPerFile.get(_relativeFileLocation)
-                                        .get(patchRequest.get("v_to")).start();
-                            }
-                        }
-                        return null;
-                    }
-                };
-
-                new Thread(downloadTask).start();
+                downloadThread(patchesThreadsDownloadPerFile, projectParentFolder, statusLabel).start();
 
                 for (Path relativeFileLocation: patchFiles.keySet()) {
                     Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
-                    Task<Void> perfileTask = new Task<Void>() {
-                        @Override public Void call() throws InterruptedException, IOException, NoSuchAlgorithmException {   
-                            increaseCurrentPatchingFilesAmount();                         
-                            Path currentFile = projectPath.resolve(_relativeFileLocation);
-                            Path newFile;
-                            Path patchFile;
-                            for (Map<String, String> patchRequest: patchFiles.get(_relativeFileLocation)) {
-                                String versionTo = patchRequest.get("v_to");
-
-                                while (!patchesThreadsDownloadPerFile.get(_relativeFileLocation).containsKey(versionTo)) {
-                                    Thread.sleep(100);
-                                }
-
-                                patchesThreadsDownloadPerFile.get(_relativeFileLocation).get(versionTo).join();
-
-                                patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(_relativeFileLocation);
-                                newFile = projectParentFolder.resolve("patched").resolve(versionTo).resolve(_relativeFileLocation);
-                                
-                                CourgetteHandler courgetteThread = new CourgetteHandler();
-                                courgetteThread.applyPatch(currentFile, newFile, patchFile,
-                                        currentFile.getParent(), false, courgettesAmountLabel, true);
-                                courgetteThread.join();
-                                addToProgressBar(progressBar, 1d/patchesAmount);
-                                // TODO: handle failure
-                                IntegrityChecker.checkFileIntegrity(newFile,
-                                        patchedFilesIntegrity.get(_relativeFileLocation).get(versionTo).first,
-                                        patchedFilesIntegrity.get(_relativeFileLocation).get(versionTo).second);
-                                // Files.deleteIfExists(patchFile);
-                                if (replaceFiles) {
-                                    Files.deleteIfExists(currentFile);
-                                }
-                                currentFile = newFile;
-                            };
-                            finalPatchedFiles.put(_relativeFileLocation, currentFile);
-                            decreaseCurrentPatchingFilesAmount();
-                            return null;
-                        }
-                    };
 
                     while (getCurrentPatchingFilesAmount() >= MAX_PATCHING_FILES_AMOUNT ||
                             !patchesThreadsDownloadPerFile.containsKey(_relativeFileLocation)) {
                         Thread.sleep(100);
                     }
 
-                    filesThreads.add(new Thread(perfileTask));
+                    filesThreads.add(patchingFileThread(projectPath, _relativeFileLocation, patchesThreadsDownloadPerFile, patchesAmount,
+                            courgettesAmountLabel, progressBar, replaceFiles, finalPatchedFiles));
                     filesThreads.get(filesThreads.size()-1).start();
                 }
 
                 for (Thread thread: filesThreads) {
                     thread.join();
                 }
+                
+                Path finalPatchedProject = null;
+                if (!replaceFiles) {
+                    finalPatchedProject = projectParentFolder.resolve("final_patched");
 
-                Path finalPatchedProject = projectParentFolder.resolve("final_patched");
-                Files.createDirectories(finalPatchedProject);
+                    Files.copy(projectPath.resolve(".psheignore"),
+                            finalPatchedProject.resolve(".psheignore"), StandardCopyOption.REPLACE_EXISTING);
+                } else {
+                    finalPatchedProject = projectPath;
+                }
+
+                JSONObject updatedConfig = new JSONObject().put("currentVersion", toVersion);
+                try {
+                    Directories.saveJSONFile(finalPatchedProject.resolve("config.json"), updatedConfig);
+                } catch (JSONException | IOException e1) {
+                    Platform.runLater(() -> {
+                        AlertWindow.showErrorWindow("Cannot update project config file");
+                    });
+                    e1.printStackTrace();
+                }
+
+                Platform.runLater(() -> {
+                    statusLabel.setText("Status: checking project integrity, this can take awhile");
+                });
+
+                if (!toVersion.equals(rootVersion)) {
+                    response = VersionsEndpoint.getSwitch(Map.of("v_from", rootVersion, "v_to", toVersion));
+                }
+
+                Map<String, List<Path>> integrityResult = checkProjectIntegrity(finalPatchedFiles, projectPath, toVersion, progressBar);
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.2);
+
+                checkoutDump.append("failed integrity files amount ").append(integrityResult.get("failed").size()).append(System.lineSeparator());
+
+                for (Path file: integrityResult.get("failed")) {
+                    checkoutDump.append("\tre-download ").append(file).append(System.lineSeparator());
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Status: downloading " + file.toString());
+                    });
+                    addToProgressBar(progressBar, 1d/integrityResult.get("failed").size());
+                    
+                    FilesEndpoint.getRoot(finalPatchedFiles.get(file), Map.of("location", file.toString()));
+                    if (!toVersion.equals(rootVersion)) {
+                        // TODO: checkout from root file to toVersion, needs rewrite to use "perfile style"
+                        checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, finalPatchedProject,
+                                file, threads, checkoutDump, courgettesAmountLabel, statusLabel);
+                    }
+                }
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
+                
+                if (!replaceFiles) {
+                    String statusStr = finalPatchedProject.toString();
+                    checkoutDump.append("unchanged files amount ").append(integrityResult.get("unchanged").size()).append(System.lineSeparator());
+                    for (Path oldFile: integrityResult.get("unchanged")) {
+                        checkoutDump.append("\tmoving unchanged files ").append(oldFile).append(System.lineSeparator());
+                        System.out.println("moving " + oldFile.toString() + " to " + statusStr);
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: moving " + oldFile.toString() + " to " + statusStr);
+                        });
+                        addToProgressBar(progressBar, 1d/integrityResult.get("unchanged").size());
+
+                        Files.createDirectories(finalPatchedProject.resolve(oldFile).getParent());
+                        Files.copy(finalPatchedFiles.get(oldFile), finalPatchedProject.resolve(oldFile), StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
+                } else {
+                    checkoutDump.append("removed files amount ").append(integrityResult.get("deleted").size()).append(System.lineSeparator());
+                    for (Path file: integrityResult.get("deleted")) {
+                        checkoutDump.append("deleted ").append(file).append(System.lineSeparator());
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: deleting " + file.toString());
+                        });
+                        addToProgressBar(progressBar, 1d/integrityResult.get("deleted").size());
+                        Files.deleteIfExists(finalPatchedProject.resolve(file));
+                    }
+                    progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
+                }
+                
+                checkoutDump.append("missing files amount ").append(integrityResult.get("missing").size()).append(System.lineSeparator());
+                for (Path remoteFile: integrityResult.get("missing")) {
+                    checkoutDump.append("\tre-download ").append(remoteFile).append(System.lineSeparator());
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Status: downloading " + remoteFile.toString());
+                    });
+                    addToProgressBar(progressBar, 1d/integrityResult.get("missing").size());
+                    
+                    FilesEndpoint.getRoot(finalPatchedProject.resolve(remoteFile), Map.of("location", remoteFile.toString()));
+                    if (!toVersion.equals(rootVersion)) {
+                        // TODO: checkout from root file to toVersion
+                        checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, patchedProjectPath,
+                                patchedProjectPath.resolve(remoteFile), threads, checkoutDump, courgettesAmountLabel, statusLabel);
+                    }
+                }
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
+                CourgetteHandler.setRemainingFilesAmount(0);
 
                 finalPatchedFiles.forEach((relativeLocation, absPath) -> {
                     try {
-                        Files.move(absPath, finalPatchedProject.resolve(relativeLocation), StandardCopyOption.REPLACE_EXISTING);
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Status: updating " + relativeLocation.toString());
+                        });
+                        addToProgressBar(progressBar, 1d/finalPatchedFiles.size());
+                        if (!integrityResult.get("deleted").contains(relativeLocation)) {
+                            Files.createDirectories(finalPatchedProject.resolve(relativeLocation).getParent());
+                            Files.move(absPath, finalPatchedProject.resolve(relativeLocation), StandardCopyOption.REPLACE_EXISTING);
+                        }
                     } catch (IOException e) {
                         AlertWindow.showErrorWindow("Failed to copy patched file to final location :(");
                         e.printStackTrace();
                     }
                 });
-
-
+                progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
 
                 progressIndicator.setProgress(1);
 
@@ -362,6 +382,98 @@ public class CheckoutToVersion {
             }
         };
         new Thread(checkoutTask).start();
+    }
+
+    private static Thread downloadThread(Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile,
+            Path projectParentFolder, Label statusLabel) {
+        Task<Void> downloadTask = new Task<>() {
+            @Override public Void call() throws InterruptedException {
+                for (Path relativeFileLocation: patchFiles.keySet()) {
+                    Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
+                    patchesThreadsDownloadPerFile.put(_relativeFileLocation, new HashMap<>());
+                    for (Map<String, String> patchRequest: patchFiles.get(_relativeFileLocation)) {
+                        Map<String, String> _patchRequest = new HashMap<>(patchRequest);
+                        Task<Void> downloadPatchTask = new Task<>() {
+                            @Override public Void call() throws IOException, NoSuchAlgorithmException, JSONException {
+                                increaseCurrentDownloadsAmount();
+                                String versionTo = _patchRequest.get("v_to");
+                                Path patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(_relativeFileLocation);
+                                String statusStr = _relativeFileLocation.toString();
+                                Platform.runLater(() -> {
+                                    statusLabel.setText("Status: downloading " + statusStr);
+                                });
+                                PatchesEndpoint.getFile(patchFile, _patchRequest);
+
+                                JSONObject patchInfoResponse = PatchesEndpoint.getInfo(_patchRequest);
+                                // TODO: handle failure
+                                IntegrityChecker.checkFileIntegrity(patchFile,
+                                        patchInfoResponse.getJSONObject("patch_file").getLong("patch_size"),
+                                        patchInfoResponse.getJSONObject("patch_file").getString("patch_checksum"));
+                                decreaseCurrentDownloadsAmount();
+                                return null;
+                            };
+                        };
+
+                        while (getCurrentDownloadsAmount() >= MAX_DOWNLOADS_AMOUNT) {
+                            Thread.sleep(100);
+                        }
+                        
+                        patchesThreadsDownloadPerFile.get(_relativeFileLocation)
+                                .put(patchRequest.get("v_to"), new Thread(downloadPatchTask));
+                        patchesThreadsDownloadPerFile.get(_relativeFileLocation)
+                                .get(patchRequest.get("v_to")).start();
+                    }
+                }
+                return null;
+            }
+        };
+
+        return new Thread(downloadTask);
+    }
+
+    private static Thread patchingFileThread(Path projectPath, Path relativeFileLocation,
+            Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile, long patchesAmount,
+            Label courgettesAmountLabel, ProgressBar progressBar, boolean replaceFiles, Map<Path, Path> finalPatchedFiles) {
+        Path projectParentFolder = projectPath.getParent();
+        Task<Void> perfileTask = new Task<Void>() {
+            @Override public Void call() throws InterruptedException, IOException, NoSuchAlgorithmException {   
+                increaseCurrentPatchingFilesAmount();                         
+                Path currentFile = projectPath.resolve(relativeFileLocation);
+                Path newFile;
+                Path patchFile;
+                for (Map<String, String> patchRequest: patchFiles.get(relativeFileLocation)) {
+                    String versionTo = patchRequest.get("v_to");
+
+                    while (!patchesThreadsDownloadPerFile.get(relativeFileLocation).containsKey(versionTo)) {
+                        Thread.sleep(100);
+                    }
+
+                    patchesThreadsDownloadPerFile.get(relativeFileLocation).get(versionTo).join();
+
+                    patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(relativeFileLocation);
+                    newFile = projectParentFolder.resolve("patched").resolve(versionTo).resolve(relativeFileLocation);
+                    
+                    CourgetteHandler courgetteThread = new CourgetteHandler();
+                    courgetteThread.applyPatch(currentFile, newFile, patchFile,
+                            currentFile.getParent(), false, courgettesAmountLabel, true);
+                    courgetteThread.join();
+                    addToProgressBar(progressBar, 1d/patchesAmount);
+                    // TODO: handle failure
+                    IntegrityChecker.checkFileIntegrity(newFile,
+                            patchedFilesIntegrity.get(relativeFileLocation).get(versionTo).first,
+                            patchedFilesIntegrity.get(relativeFileLocation).get(versionTo).second);
+                    // Files.deleteIfExists(patchFile);
+                    if (replaceFiles) {
+                        Files.deleteIfExists(currentFile);
+                    }
+                    currentFile = newFile;
+                };
+                finalPatchedFiles.put(relativeFileLocation, currentFile);
+                decreaseCurrentPatchingFilesAmount();
+                return null;
+            }
+        };
+        return new Thread(perfileTask);
     }
 
     public static void checkoutToVersionByPatches(Path projectPath, boolean replaceFiles, String toVersion,
@@ -751,15 +863,15 @@ public class CheckoutToVersion {
         List<Path> deletedFiles = new ArrayList<>();
         List<Path> unchangedFiles = new ArrayList<>();
 
-        patchedFiles.forEach((relativeFile, file) -> {
-            IntegrityChecker.checkLocalIntegrity(file, relativeFile, failedFiles, deletedFiles, versionFiles);
-            addToProgressBar(progressBar, 1d/(patchedFiles.size() + versionFiles.size()));
-        });
+        // patchedFiles.forEach((relativeFile, file) -> {
+        //     IntegrityChecker.checkLocalIntegrity(file, relativeFile, failedFiles, deletedFiles, versionFiles);
+        //     addToProgressBar(progressBar, 1d/(patchedFiles.size() + versionFiles.size()));
+        // });
 
         versionFiles.keySet().forEach(remoteFile -> {
             Path file = oldProjectPath.resolve(remoteFile.toString());
             IntegrityChecker.checkRemoteIntegrity(file, remoteFile, patchedFiles, unchangedFiles, missingFiles, versionFiles);
-            addToProgressBar(progressBar, 1d/(patchedFiles.size() + versionFiles.size()));
+            addToProgressBar(progressBar, 1d/(versionFiles.size()));
         });
 
         Map<String, List<Path>> result = new HashMap<>(
