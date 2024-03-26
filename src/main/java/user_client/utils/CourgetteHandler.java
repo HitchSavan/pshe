@@ -165,7 +165,7 @@ public class CourgetteHandler extends Thread {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            new CourgetteHandler().generatePatch(oldFile, newPath, patchFile, oldProjectPath, updatingComponent, false);
+            new CourgetteHandler().generatePatch(oldFile, newPath, patchFile, oldFile.getParent(), updatingComponent, false);
         }
 
         Path relativeNewPath;
@@ -184,7 +184,7 @@ public class CourgetteHandler extends Thread {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                new CourgetteHandler().generatePatch(oldPath, newFile, patchFile, oldProjectPath, updatingComponent, false);
+                new CourgetteHandler().generatePatch(oldPath, newFile, patchFile, oldPath.getParent(), updatingComponent, false);
             }
         }
     }

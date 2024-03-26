@@ -194,7 +194,7 @@ public class ApplyTab extends Tab {
                     return;
                 }
                 new CourgetteHandler().applyPatch(oldPath, newPath, patchFile,
-                        projectPath, replaceFilesCheckbox.isSelected(), activeCourgettesAmount, false);
+                        oldPath.getParent(), replaceFilesCheckbox.isSelected(), activeCourgettesAmount, false);
             }
             applyPatchButton.setDisable(false);
         });

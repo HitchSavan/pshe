@@ -163,7 +163,7 @@ public class CheckoutToVersion {
         Map<String, String> params = Map.of("v_from", currentVersion, "v_to", toVersion);
         FileVisitor fileVisitor = new FileVisitor();
         Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile = new HashMap<>();
-        Task<Void> task = new Task<>() {
+        Task<Void> checkoutTask = new Task<>() {
             @Override public Void call() throws InterruptedException, NoSuchAlgorithmException, JSONException, IOException {
                 Instant start = Instant.now();
                 JSONObject response = null;
@@ -290,7 +290,7 @@ public class CheckoutToVersion {
                                 
                                 CourgetteHandler courgetteThread = new CourgetteHandler();
                                 courgetteThread.applyPatch(currentFile, newFile, patchFile,
-                                        projectParentFolder, false, courgettesAmountLabel, true);
+                                        currentFile.getParent(), false, courgettesAmountLabel, true);
                                 courgetteThread.join();
                                 addToProgressBar(progressBar, 1d/patchesAmount);
                                 // TODO: handle failure
@@ -361,7 +361,7 @@ public class CheckoutToVersion {
                 return null;
             }
         };
-        new Thread(task).start();
+        new Thread(checkoutTask).start();
     }
 
     public static void checkoutToVersionByPatches(Path projectPath, boolean replaceFiles, String toVersion,
@@ -411,9 +411,8 @@ public class CheckoutToVersion {
 
         Map<String, String> params = Map.of("v_from", currentVersion, "v_to", toVersion);
 
-        Task<Void> task = new Task<>() {
+        Task<Void> checkoutTask = new Task<>() {
             @Override public Void call() throws InterruptedException, IOException, NoSuchAlgorithmException, JSONException {
-
                 Instant start = Instant.now();
                 JSONObject response = null;
                 try {
@@ -518,7 +517,7 @@ public class CheckoutToVersion {
                         }
                         checkoutDump.append("\tpatching ").append(patchFile).append(System.lineSeparator());
                         CourgetteHandler thread = new CourgetteHandler();
-                        thread.applyPatch(oldPath, newPath, patchFile, oldActiveProjectPath.getParent(), false, courgettesAmountLabel, true);
+                        thread.applyPatch(oldPath, newPath, patchFile, oldPath.getParent(), false, courgettesAmountLabel, true);
                         threads.add(thread);
                         Platform.runLater(() -> {
                             statusLabel.setText("Status: patching " + folder.relativize(patchFile).toString());
@@ -701,7 +700,7 @@ public class CheckoutToVersion {
                 return null;
             }
         };
-        new Thread(task).start();
+        new Thread(checkoutTask).start();
     }
 
     public static void checkoutFromRoot(JSONArray files, Path oldProjectPath, Path patchFolderPath,
@@ -727,7 +726,7 @@ public class CheckoutToVersion {
                     }
                     CourgetteHandler thread = new CourgetteHandler();
                     thread.applyPatch(absRootFilePath, Paths.get(absRootFilePath.toString() + "_patched"),
-                            absPatchPath, oldProjectPath.getParent(), true, courgettesAmountLabel, true);
+                            absPatchPath, absRootFilePath.getParent(), true, courgettesAmountLabel, true);
                     threads.add(thread);
                     String statusStr = subfolderPath.relativize(absPatchPath).toString();
                     Platform.runLater(() -> {
