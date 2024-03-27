@@ -52,6 +52,7 @@ public class CheckoutToVersion {
     private static Map<Path, List<Map<String, String>>> patchFiles = new HashMap<>();
     // Map<relativeFilePath, Map<versionTo, patchedFileBytesizeAndChecksum>>
     private static Map<Path, Map<String, Pair<Long, String>>> patchedFilesIntegrity = new HashMap<>();
+    private static Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile = new HashMap<>();
     @Getter @Setter
     private static int MAX_DOWNLOADS_AMOUNT = 20;
     private static int currentDownloadsAmount = 0;
@@ -77,6 +78,17 @@ public class CheckoutToVersion {
     }
     private static synchronized void decreaseCurrentPatchingFilesAmount() {
         --currentPatchingFilesAmount;
+    }
+
+    private static synchronized Map<Path, Map<String, Thread>> getPatchesThreadsDownloadPerFile() {
+        return patchesThreadsDownloadPerFile;
+    }
+    private static synchronized void patchesThreadsDownloadPerFile_addFile(Path newFile) {
+        patchesThreadsDownloadPerFile.put(newFile, new HashMap<>());
+    }
+    private static synchronized Thread patchesThreadsDownloadPerFile_addThread(Path file, String versionTo, Thread thread) {
+        patchesThreadsDownloadPerFile.get(file).put(versionTo, thread);
+        return thread;
     }
 
     public static void addDisablingButton(Button button) {
@@ -162,7 +174,7 @@ public class CheckoutToVersion {
 
         Map<String, String> params = Map.of("v_from", currentVersion, "v_to", toVersion);
         FileVisitor fileVisitor = new FileVisitor();
-        Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile = new HashMap<>();
+        
         Task<Void> checkoutTask = new Task<>() {
             @Override public Void call() throws InterruptedException, NoSuchAlgorithmException, JSONException, IOException {
                 Instant start = Instant.now();
@@ -225,17 +237,17 @@ public class CheckoutToVersion {
                 List<Thread> filesThreads = new ArrayList<>();
                 Map<Path, Path> finalPatchedFiles = new HashMap<>();
 
-                downloadThread(patchesThreadsDownloadPerFile, projectParentFolder, statusLabel).start();
+                downloadThread(projectParentFolder, statusLabel).start();
 
                 for (Path relativeFileLocation: patchFiles.keySet()) {
                     Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
 
                     while (getCurrentPatchingFilesAmount() >= MAX_PATCHING_FILES_AMOUNT ||
-                            !patchesThreadsDownloadPerFile.containsKey(_relativeFileLocation)) {
+                            !getPatchesThreadsDownloadPerFile().containsKey(_relativeFileLocation)) {
                         Thread.sleep(100);
                     }
 
-                    filesThreads.add(patchingFileThread(projectPath, _relativeFileLocation, patchesThreadsDownloadPerFile, patchesAmount,
+                    filesThreads.add(patchingFileThread(projectPath, _relativeFileLocation, patchesAmount,
                             courgettesAmountLabel, progressBar, replaceFiles, finalPatchedFiles));
                     filesThreads.get(filesThreads.size()-1).start();
                 }
@@ -287,8 +299,8 @@ public class CheckoutToVersion {
                     FilesEndpoint.getRoot(finalPatchedFiles.get(file), Map.of("location", file.toString()));
                     if (!toVersion.equals(rootVersion)) {
                         // TODO: checkout from root file to toVersion, needs rewrite to use "perfile style"
-                        checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, finalPatchedProject,
-                                file, threads, checkoutDump, courgettesAmountLabel, statusLabel);
+                        // checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, finalPatchedProject,
+                        //         file, threads, checkoutDump, courgettesAmountLabel, statusLabel);
                     }
                 }
                 progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
@@ -332,13 +344,14 @@ public class CheckoutToVersion {
                     FilesEndpoint.getRoot(finalPatchedProject.resolve(remoteFile), Map.of("location", remoteFile.toString()));
                     if (!toVersion.equals(rootVersion)) {
                         // TODO: checkout from root file to toVersion
-                        checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, patchedProjectPath,
-                                patchedProjectPath.resolve(remoteFile), threads, checkoutDump, courgettesAmountLabel, statusLabel);
+                        // checkoutFromRoot(response.getJSONArray("files"), projectPath, tmpPatchPath, patchedProjectPath,
+                        //         patchedProjectPath.resolve(remoteFile), threads, checkoutDump, courgettesAmountLabel, statusLabel);
                     }
                 }
                 progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
                 CourgetteHandler.setRemainingFilesAmount(0);
 
+                Path targetPath = finalPatchedProject;
                 finalPatchedFiles.forEach((relativeLocation, absPath) -> {
                     try {
                         Platform.runLater(() -> {
@@ -346,8 +359,8 @@ public class CheckoutToVersion {
                         });
                         addToProgressBar(progressBar, 1d/finalPatchedFiles.size());
                         if (!integrityResult.get("deleted").contains(relativeLocation)) {
-                            Files.createDirectories(finalPatchedProject.resolve(relativeLocation).getParent());
-                            Files.move(absPath, finalPatchedProject.resolve(relativeLocation), StandardCopyOption.REPLACE_EXISTING);
+                            Files.createDirectories(targetPath.resolve(relativeLocation).getParent());
+                            Files.move(absPath, targetPath.resolve(relativeLocation), StandardCopyOption.REPLACE_EXISTING);
                         }
                     } catch (IOException e) {
                         AlertWindow.showErrorWindow("Failed to copy patched file to final location :(");
@@ -384,13 +397,12 @@ public class CheckoutToVersion {
         new Thread(checkoutTask).start();
     }
 
-    private static Thread downloadThread(Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile,
-            Path projectParentFolder, Label statusLabel) {
+    private static Thread downloadThread(Path projectParentFolder, Label statusLabel) {
         Task<Void> downloadTask = new Task<>() {
             @Override public Void call() throws InterruptedException {
                 for (Path relativeFileLocation: patchFiles.keySet()) {
                     Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
-                    patchesThreadsDownloadPerFile.put(_relativeFileLocation, new HashMap<>());
+                    patchesThreadsDownloadPerFile_addFile(_relativeFileLocation);
                     for (Map<String, String> patchRequest: patchFiles.get(_relativeFileLocation)) {
                         Map<String, String> _patchRequest = new HashMap<>(patchRequest);
                         Task<Void> downloadPatchTask = new Task<>() {
@@ -418,10 +430,8 @@ public class CheckoutToVersion {
                             Thread.sleep(100);
                         }
                         
-                        patchesThreadsDownloadPerFile.get(_relativeFileLocation)
-                                .put(patchRequest.get("v_to"), new Thread(downloadPatchTask));
-                        patchesThreadsDownloadPerFile.get(_relativeFileLocation)
-                                .get(patchRequest.get("v_to")).start();
+                        patchesThreadsDownloadPerFile_addThread(_relativeFileLocation,
+                                patchRequest.get("v_to"), new Thread(downloadPatchTask)).start();
                     }
                 }
                 return null;
@@ -431,8 +441,7 @@ public class CheckoutToVersion {
         return new Thread(downloadTask);
     }
 
-    private static Thread patchingFileThread(Path projectPath, Path relativeFileLocation,
-            Map<Path, Map<String, Thread>> patchesThreadsDownloadPerFile, long patchesAmount,
+    private static Thread patchingFileThread(Path projectPath, Path relativeFileLocation, long patchesAmount,
             Label courgettesAmountLabel, ProgressBar progressBar, boolean replaceFiles, Map<Path, Path> finalPatchedFiles) {
         Path projectParentFolder = projectPath.getParent();
         Task<Void> perfileTask = new Task<Void>() {
@@ -444,11 +453,10 @@ public class CheckoutToVersion {
                 for (Map<String, String> patchRequest: patchFiles.get(relativeFileLocation)) {
                     String versionTo = patchRequest.get("v_to");
 
-                    while (!patchesThreadsDownloadPerFile.get(relativeFileLocation).containsKey(versionTo)) {
+                    while (!getPatchesThreadsDownloadPerFile().get(relativeFileLocation).containsKey(versionTo)) {
                         Thread.sleep(100);
                     }
-
-                    patchesThreadsDownloadPerFile.get(relativeFileLocation).get(versionTo).join();
+                    getPatchesThreadsDownloadPerFile().get(relativeFileLocation).get(versionTo).join();
 
                     patchFile = projectParentFolder.resolve("patches").resolve(versionTo).resolve(relativeFileLocation);
                     newFile = projectParentFolder.resolve("patched").resolve(versionTo).resolve(relativeFileLocation);
