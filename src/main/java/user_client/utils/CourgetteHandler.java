@@ -65,7 +65,6 @@ public class CourgetteHandler extends Thread {
         --remainingFilesAmount;
     }
 
-    // TODO: disable exec button
     private void init(Path oldFile, Path newPath, Path patchFile, Path courgetteWorkingDirectory, boolean replaceFiles,
             Label updatingComponent, boolean generate, boolean redirectOutput) {
         this.updatingComponent = updatingComponent;

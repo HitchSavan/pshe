@@ -39,7 +39,6 @@ public class RemoteGenerateTab extends Tab {
     public Path newProjectPath;
 
     public VBox setupUi(JSONObject config) {
-        // TODO: fix loading
         boolean rememberPaths = false;
 
         oldProjectPath = Paths.get(config.getJSONObject(RunCourgette.os)
