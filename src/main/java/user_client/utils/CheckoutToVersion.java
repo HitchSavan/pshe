@@ -854,7 +854,6 @@ public class CheckoutToVersion {
                     });
                 });
             }
-            
         }
         for (CourgetteHandler thread: threads) {
             thread.join();

@@ -68,6 +68,7 @@ public class RemoteApplyTab extends Tab {
         patchToRootButton.setDisable(true);
         
         CheckoutToVersion.addDisablingButton(patchToRootButton);
+        CheckoutToVersion.addDisablingButton(chooseProjectButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
         applyStatus = new Label("Status: idle");

@@ -114,6 +114,10 @@ public class GenerateTab extends Tab {
                 patchPathPanel, checkboxPanel, genPatchButton, activeCourgettesAmount);
 
         this.setContent(genTabContent);
+        CheckoutToVersion.addDisablingButton(chooseOldProjectButton);
+        CheckoutToVersion.addDisablingButton(chooseNewProjectButton);
+        CheckoutToVersion.addDisablingButton(choosePatchButton);
+        CheckoutToVersion.addDisablingButton(genPatchButton);
     }
 
     public void setupEvents(JSONObject config, AuthWindow authWindow) {

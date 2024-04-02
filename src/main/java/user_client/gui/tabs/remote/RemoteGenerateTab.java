@@ -84,7 +84,10 @@ public class RemoteGenerateTab extends Tab {
 
         genPatchButton = new Button("Create patch");
         genPatchButton.setPrefSize(110, 0);
+
         CheckoutToVersion.addDisablingButton(genPatchButton);
+        CheckoutToVersion.addDisablingButton(chooseNewProjectButton);
+        CheckoutToVersion.addDisablingButton(chooseOldProjectButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
 

@@ -103,6 +103,9 @@ public class ApplyTab extends Tab {
                 checkboxPanel, applyPatchButton, activeCourgettesAmount);
 
         this.setContent(tabContent);
+        CheckoutToVersion.addDisablingButton(choosePatchButton);
+        CheckoutToVersion.addDisablingButton(chooseProjectButton);
+        CheckoutToVersion.addDisablingButton(applyPatchButton);
     }
 
     public void setupEvents(JSONObject config, AuthWindow authWindow) {
