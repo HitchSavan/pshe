@@ -16,12 +16,10 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
 import user_client.utils.AlertWindow;
 import user_client.utils.CheckoutToVersion;
-import user_client.utils.ChoosePath;
 
 public class RemoteApplyTab extends Tab {
     public TextField projectPathField;
@@ -82,9 +80,6 @@ public class RemoteApplyTab extends Tab {
     }
 
     public void setupEvents(String rootVersion, ProgressBar progressBar, JSONObject config, AuthWindow authWindow) {
-        chooseProjectButton.setOnAction(e -> {
-            ChoosePath.chooseDirectory(chooseProjectButton, projectPathField, (Stage)chooseProjectButton.getScene().getWindow());
-        });
         patchToRootButton.setOnAction(e -> {
             try {
                 CheckoutToVersion.checkoutToVersionByFiles(Paths.get(projectPathField.getText()), replaceFilesCheckbox.isSelected(),

@@ -33,14 +33,12 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import javafx.stage.Stage;
 import patcher.remote_api.endpoints.VersionsEndpoint;
 import patcher.remote_api.entities.VersionEntity;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
 import user_client.utils.AlertWindow;
 import user_client.utils.CheckoutToVersion;
-import user_client.utils.ChoosePath;
 import user_client.utils.HistoryTableItem;
 
 public class RemoteHistoryTab extends Tab {
@@ -197,9 +195,6 @@ public class RemoteHistoryTab extends Tab {
     }
 
     public void setupEvents(ProgressBar progressBar, JSONObject config, AuthWindow authWindow) {
-        chooseCheckoutProjectButton.setOnAction(e -> {
-            ChoosePath.chooseDirectory(chooseCheckoutProjectButton, checkoutProjectPathField, (Stage)chooseCheckoutProjectButton.getScene().getWindow());
-        });
         checkoutButton.setOnAction(e -> {
             checkoutButton.setDisable(true);
             if (checkoutVersion != null) {
