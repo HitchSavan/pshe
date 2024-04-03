@@ -32,6 +32,7 @@ import user_client.gui.tabs.remote.RemoteApplyTab;
 import user_client.gui.tabs.remote.RemoteGenerateTab;
 import user_client.gui.tabs.remote.RemoteHistoryTab;
 import user_client.utils.AlertWindow;
+import user_client.utils.ChoosePath;
 
 public class PatcherWindow extends Application {
 
@@ -256,10 +257,26 @@ public class PatcherWindow extends Application {
     private void setupRemoteEvents() {
         Task<Void> task = new Task<>() {
             @Override public Void call() throws InterruptedException {
+                remoteApplyTab.chooseProjectButton.setOnAction(e -> {
+                    ChoosePath.chooseDirectory(remoteApplyTab.chooseProjectButton,
+                            remoteApplyTab.projectPathField, primaryStage);
+                });
+                remoteGenTab.chooseNewProjectButton.setOnAction(e -> {
+                    ChoosePath.chooseDirectory(remoteGenTab.chooseNewProjectButton,
+                            remoteGenTab.newProjectPathField, primaryStage);
+                });
+                remoteGenTab.chooseOldProjectButton.setOnAction(e -> {
+                    ChoosePath.chooseDirectory(remoteGenTab.chooseOldProjectButton,
+                            remoteGenTab.oldProjectPathField, primaryStage);
+                });
+                historyTab.chooseCheckoutProjectButton.setOnAction(e -> {
+                    ChoosePath.chooseDirectory(historyTab.chooseCheckoutProjectButton,
+                            historyTab.checkoutProjectPathField, primaryStage);
+                });
+
                 while (historyTab.rootVersion == null) {
                     Thread.sleep(100);
                 }
-
                 Platform.runLater(() -> {
                     remoteApplyTab.setupEvents(historyTab.rootVersion.getVersionString(), progressBar, authWindow.config, authWindow);
                     remoteGenTab.setupEvents(historyTab.rootVersion.getVersionString(), authWindow.config, authWindow);

@@ -17,14 +17,12 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import patcher.utils.files_utils.Directories;
 import patcher.utils.files_utils.FileVisitor;
 import patcher.utils.patching_utils.RunCourgette;
 import user_client.gui.AuthWindow;
 import user_client.utils.AlertWindow;
 import user_client.utils.CheckoutToVersion;
-import user_client.utils.ChoosePath;
 import user_client.utils.CourgetteHandler;
 
 public class RemoteGenerateTab extends Tab {
@@ -39,7 +37,6 @@ public class RemoteGenerateTab extends Tab {
     public Path newProjectPath;
 
     public VBox setupUi(JSONObject config) {
-        // TODO: fix loading
         boolean rememberPaths = false;
 
         oldProjectPath = Paths.get(config.getJSONObject(RunCourgette.os)
@@ -84,7 +81,10 @@ public class RemoteGenerateTab extends Tab {
 
         genPatchButton = new Button("Create patch");
         genPatchButton.setPrefSize(110, 0);
+
         CheckoutToVersion.addDisablingButton(genPatchButton);
+        CheckoutToVersion.addDisablingButton(chooseNewProjectButton);
+        CheckoutToVersion.addDisablingButton(chooseOldProjectButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
 
@@ -97,12 +97,6 @@ public class RemoteGenerateTab extends Tab {
     }
 
     public void setupEvents(String rootVersion, JSONObject config, AuthWindow authWindow) {
-        chooseNewProjectButton.setOnAction(e -> {
-            ChoosePath.chooseDirectory(chooseNewProjectButton, newProjectPathField, (Stage)chooseNewProjectButton.getScene().getWindow());
-        });
-        chooseOldProjectButton.setOnAction(e -> {
-            ChoosePath.chooseDirectory(chooseOldProjectButton, oldProjectPathField, (Stage)chooseOldProjectButton.getScene().getWindow());
-        });
         genPatchButton.setOnAction(e -> {
             genPatchButton.setDisable(true);
             oldProjectPath = Paths.get(oldProjectPathField.getText());
