@@ -103,7 +103,6 @@ public class GenerateTab extends Tab {
 
         genPatchButton = new Button("Create patch");
         genPatchButton.setPrefSize(110, 0);
-        CheckoutToVersion.addDisablingButton(genPatchButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
 

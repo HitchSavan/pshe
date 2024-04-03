@@ -87,9 +87,6 @@ public class RemoteHistoryTab extends Tab {
         checkoutButton.setMinSize(70, 0);
         checkoutButton.setDisable(true);
 
-        CheckoutToVersion.addDisablingButton(checkoutButton);
-        CheckoutToVersion.addDisablingButton(chooseCheckoutProjectButton);
-
         TableView.TableViewSelectionModel<HistoryTableItem> selectionModel = table.getSelectionModel();
         selectionModel.selectedItemProperty().addListener(new ChangeListener<HistoryTableItem>() {
             @Override
@@ -146,6 +143,10 @@ public class RemoteHistoryTab extends Tab {
         historyTabContent.setPadding(new Insets(5));
         historyTabContent.getChildren().addAll(tablePane, projectPathPanel, checkboxPanel,
                 activeCourgettesAmount, checkoutStatus);
+
+        CheckoutToVersion.addDisablingButton(checkoutButton);
+        CheckoutToVersion.addDisablingButton(chooseCheckoutProjectButton);
+
         return historyTabContent;
     }
 

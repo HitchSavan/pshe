@@ -92,7 +92,6 @@ public class ApplyTab extends Tab {
 
         applyPatchButton = new Button("Patch");
         applyPatchButton.setPrefSize(60, 0);
-        CheckoutToVersion.addDisablingButton(applyPatchButton);
 
         activeCourgettesAmount = new Label("Active Courgette instances:\t0");
 
