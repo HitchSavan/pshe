@@ -337,13 +337,36 @@ public class CheckoutToVersion {
 
                             Thread curRootFileDownloadThread = downloadRootFileThread(projectParentFolder.resolve("root_files"), file, statusLabel);
                             curRootFileDownloadThread.start();
-
-
-                            // download patches -> apply -> move last patched to final location
                         } else {
                             FilesEndpoint.getRoot(finalPatchedFiles.get(file), Map.of("location", file.toString()));
                         }
                     }
+                }
+                // download patches -> apply -> move last patched to final location
+                downloadPatchesThread(projectParentFolder, rootPatchesRequests, statusLabel).start();
+                
+                counter = 0;
+                for (Path file: rootPatchesRequests.keySet()) {
+                    counter += rootPatchesRequests.get(file).size();
+                }
+
+                filesThreads.clear();
+                for (Path relativeFileLocation: rootPatchesRequests.keySet()) {
+                    Path _relativeFileLocation = Paths.get(relativeFileLocation.toString());
+
+                    while (getCurrentPatchingFilesAmount() >= MAX_PATCHING_FILES_AMOUNT ||
+                            !getPatchesThreadsDownloadPerFile().containsKey(_relativeFileLocation)) {
+                        Thread.sleep(100);
+                    }
+
+                    increaseCurrentPatchingFilesAmount();
+                    filesThreads.add(patchingFileThread(projectParentFolder.resolve("root_files"), _relativeFileLocation, counter,
+                            courgettesAmountLabel, progressBar, rootPatchesRequests.get(relativeFileLocation), replaceFiles, finalPatchedFiles));
+                    filesThreads.get(filesThreads.size()-1).start();
+                }
+
+                for (Thread thread: filesThreads) {
+                    thread.join();
                 }
                 // progressIndicator.setProgress(progressIndicator.getProgress() + 0.1);
                 
